@@ -1,6 +1,9 @@
 // scripts/makeProposal.js
 
 const { ethers } = require("hardhat");
+const governorABI = require("../artifacts/contracts/Dao.sol/HomebaseDAO.json").abi;
+// const timelockABI = require("../artifacts/contracts/Dao.sol/HomebaseDAO.json").abi;
+
 
 async function main() {
   // Get the proposer account
@@ -8,20 +11,21 @@ async function main() {
 
   console.log("Making proposal with account:", proposer.address);
 
-  // Addresses of deployed contracts (replace with your actual addresses)
-  const governorAddress = "0x047fC471f107B52286BE2556de95a7D779A1B744";
-  const timelockAddress = "0xDc3736A265b04c4EE63789B964f25D38F1A0368d";
+  const governorAddress = "0x61B52bc383B623DC42C2a244C83b23E1d7eeDfdc";
+  const timelockAddress = "0x936F8487648157CBfBeD7070eC0aca23a1BA291E";
 
-  // Designated recipient address (replace with the desired recipient)
   const recipient = "0x8ff40431599b9472c748b5011DEDB8cd5403bAfA";
 
-  // Get contract instances
-  const governor = await ethers.getContractAt("HomebaseDAO", governorAddress);
-  const timelock = await ethers.getContractAt("TimelockController", timelockAddress);
+
+  const timelockABI = [
+    // Add TimelockController ABI here
+  ];
+
+  const governor = new ethers.Contract(governorAddress, governorABI, proposer);
+  const timelock = new ethers.Contract(timelockAddress, timelockABI, proposer);
 
   // Ensure the TimelockController has enough ETH to transfer
-  const amountToSend = ethers.parseEther("1"); // 1 ETH
-
+  const amountToSend = 1; // Corrected this line
   console.log("Sending 1 ETH to TimelockController...");
 
   const fundTx = await proposer.sendTransaction({
@@ -43,8 +47,22 @@ async function main() {
   const proposeTx = await governor.propose(targets, values, calldatas, description);
   const proposeReceipt = await proposeTx.wait();
 
-  // Extract the proposal ID from the event logs
-  const proposalId = proposeReceipt.events.find((event) => event.event === "ProposalCreated").args.proposalId;
+  // Parse the logs to find the ProposalCreated event
+  const proposalCreatedEvent = proposeReceipt.logs
+    .map((log) => {
+      try {
+        return governor.interface.parseLog(log);
+      } catch (e) {
+        return null;
+      }
+    })
+    .find((event) => event && event.name === "ProposalCreated");
+
+  if (!proposalCreatedEvent) {
+    throw new Error("ProposalCreated event not found");
+  }
+
+  const proposalId = proposalCreatedEvent.args.proposalId;
 
   console.log("Proposal created with ID:", proposalId.toString());
 }
