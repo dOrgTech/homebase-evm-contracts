@@ -1,7 +1,7 @@
 node_modules
 .env
 secrets.txt
-
+.config.js
 # Hardhat files
 /cache
 /artifacts
@@ -16,3 +16,4 @@ secrets.txt
 
 # Hardhat Ignition default folder for deployments against a local node
 ignition/deployments/chain-31337
+/scripts/config.js

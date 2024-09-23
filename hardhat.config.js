@@ -1,5 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 
+const { INFURA_API_KEY, SEPOLIA_PRIVATE_KEY } = require("./config");
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -17,6 +19,16 @@ module.exports = {
       accounts: {                   // (Optional) Add Ganache account private keys if needed
         mnemonic: "fruit insect love learn tower opera divide link intact always garment foam", 
       }
-    }
+    },
+    sepolia: {
+      url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
+      chainId: 11155111,
+      accounts: [`0x${SEPOLIA_PRIVATE_KEY}`], // Ensure 0x is added here
+    },
+    et: {
+      url: `https://node.ghostnet.etherlink.com`,
+      chainId: 128123,
+      accounts: [`0x${SEPOLIA_PRIVATE_KEY}`], // Ensure 0x is added here
+    },
   }
 };

@@ -1,21 +1,26 @@
-// scripts/makeProposal.js
-
 const { ethers } = require("hardhat");
 const governorABI = require("../artifacts/contracts/Dao.sol/HomebaseDAO.json").abi;
-// const timelockABI = require("../artifacts/contracts/Dao.sol/HomebaseDAO.json").abi;
-
+const fs = require("fs");
+const path = require("path");
+const configPath = path.join(__dirname, "../config.js");
 
 async function main() {
+  let config;
+  try {
+    config = require(configPath);
+  } catch (err) {
+    // If config.js doesn't exist or has issues, start with an empty object
+    config = {};
+  }
+
   // Get the proposer account
   const [proposer] = await ethers.getSigners();
 
   console.log("Making proposal with account:", proposer.address);
 
-  const governorAddress = "0x61B52bc383B623DC42C2a244C83b23E1d7eeDfdc";
-  const timelockAddress = "0x936F8487648157CBfBeD7070eC0aca23a1BA291E";
-
-  const recipient = "0x8ff40431599b9472c748b5011DEDB8cd5403bAfA";
-
+  const governorAddress = config.DAO_ADDRESS;
+  const timelockAddress = config.TIMELOCK_ADDRESS;
+  const recipient = "0x51667815f2E5aA9C269EcA4507E5e6A26943Aa9b";
 
   const timelockABI = [
     // Add TimelockController ABI here
@@ -24,23 +29,29 @@ async function main() {
   const governor = new ethers.Contract(governorAddress, governorABI, proposer);
   const timelock = new ethers.Contract(timelockAddress, timelockABI, proposer);
 
-  // Ensure the TimelockController has enough ETH to transfer
-  const amountToSend = 1; // Corrected this line
-  console.log("Sending 1 ETH to TimelockController...");
+  // Function to send native currency to the TimeLockController
+  async function fundTimeLockController() {
+    const amountToSend = 100; // 1 ETH (or native token)
+    console.log(`Sending ${amountToSend.toString()} to TimelockController...`);
 
-  const fundTx = await proposer.sendTransaction({
-    to: timelockAddress,
-    value: amountToSend,
-  });
-  await fundTx.wait();
+    const fundTx = await proposer.sendTransaction({
+      to: timelockAddress,
+      value: amountToSend,
+    });
+    await fundTx.wait();
 
-  console.log("1 ETH sent to TimelockController.");
+    console.log(`${amountToSend.toString()} sent to TimelockController.`);
+  }
+
+
+  // await fundTimeLockController();
 
   // Proposal details
+  const amountToSend = 0; // 1 ETH (or native token)
   const targets = [recipient];
-  const values = [amountToSend];
+  const values = [0];
   const calldatas = ["0x"]; // Empty calldata since we're just transferring ETH
-  const description = "Proposal to transfer 1 ETH to the designated recipient.";
+  const description = "A proposal to transfer 1 ETH to the designated recipient.";
 
   console.log("Creating proposal...");
 

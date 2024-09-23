@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.so
 contract HomebaseDAO is Governor, GovernorSettings, GovernorCountingSimple, GovernorVotes, GovernorVotesQuorumFraction, GovernorTimelockControl {
     constructor(IVotes _token, TimelockController _timelock)
         Governor("MyGovernor")
-        GovernorSettings(300 /* 5 min*/, 600 /* 10 min */, 0) //THIS IS CONFIGURED FOR TESTING.
+        GovernorSettings(2 minutes, 1 hours, 1)
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(4)
         GovernorTimelockControl(_timelock)
