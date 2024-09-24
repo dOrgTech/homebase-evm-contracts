@@ -1910,7 +1910,7 @@
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": true,
+			"enabled": false,
 			"runs": 200
 		},
 		"remappings": []
@@ -2221,11 +2221,11 @@
 			]
 		},
 		"contracts/Dao.sol": {
-			"keccak256": "0xbf1d5809f65c8f224b26e2ca260926bbfc88258cf710541b15dc3b53622de8f2",
+			"keccak256": "0x531099dcaa6f8b4268a9d89dbb9514352110d4aae13e5a38365bd64b2de8a279",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://53c95f96f6ae465aaa78aee4b9ce70c9cc160f0aa8c1ed537c882fcf14382c8c",
-				"dweb:/ipfs/QmVorTSKpYLSDhZwmPAkvVUWXkWX5aiRTGh2svxbQ9JJw9"
+				"bzz-raw://f02049166f9128e4f9e34e7546f5af68ca14ed1d281a8995f1d0d02c6c72b55b",
+				"dweb:/ipfs/QmZxdyWWgZM47Qfj2F87taaDgS8jbJzQSHZKXmPVkwMbXM"
 			]
 		}
 	},
