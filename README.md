@@ -4,26 +4,8 @@ This repository contains the EVM on-chain backend of the Homebase DAO applicatio
 
 ## Flow Overview
 
-\```mermaid
-sequenceDiagram
-    participant User
-    participant GovToken
-    participant DAOContract as DAO Contract
-    participant Timelock as TimelockController (Treasury)
-    participant TargetContract
+![](https://i.ibb.co/2Wq98jt/schematic.png)
 
-    User ->> GovToken: Delegate votes
-    User ->> DAOContract: propose(targets, values, calldatas, description)
-    DAOContract ->> DAOContract: Proposal Created
-    Note over DAOContract: Voting Delay
-    User ->> DAOContract: castVote(proposalId)
-    Note over DAOContract: Voting Period
-    DAOContract ->> DAOContract: Proposal Succeeded
-    DAOContract ->> Timelock: queue(proposal)
-    Note over Timelock: Timelock Delay
-    DAOContract ->> Timelock: execute(proposal)
-    Timelock ->> TargetContract: Executes callData
-\```
 
 ### Key Contracts
 
