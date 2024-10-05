@@ -13,9 +13,15 @@ import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.so
 //if I change it here??
 
 contract HomebaseDAO is Governor, GovernorSettings, GovernorCountingSimple, GovernorVotes, GovernorVotesQuorumFraction, GovernorTimelockControl {
-    constructor(IVotes _token, TimelockController _timelock)
-        Governor("MyGovernor")
-        GovernorSettings(2 minutes, 1 hours, 1)
+constructor(
+        IVotes _token,
+        TimelockController _timelock,
+        string memory name,
+        uint48 minsDelay,
+        uint32 minsVoting
+    )
+        Governor(name)
+        GovernorSettings(minsDelay * 1 minutes, minsVoting * 1 minutes, 1) 
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(4)
         GovernorTimelockControl(_timelock)

@@ -11,7 +11,8 @@ module.exports = {
         enabled: true,
         runs: 200, // Same as the value used in Remix
       },
-  }},
+  }
+},
   networks: {
     ganache: {
       url: "http://127.0.0.1:7545",  
