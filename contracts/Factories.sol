@@ -2,19 +2,20 @@
 pragma solidity ^0.8.24;
 
 import "./Token.sol";
+import "./Registry.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "./Dao.sol";
 
 contract TokenFactory {
     address[] public deployedTokens;
-
     function deployToken(
         string memory name,
         string memory symbol,
+        uint8 decimals,
         address[] memory initialMembers,
         uint256[] memory initialAmounts
     ) public returns (address) {
-        HBEVM_token token = new HBEVM_token(name, symbol, initialMembers, initialAmounts);
+        HBEVM_token token = new HBEVM_token(name, symbol, decimals,initialMembers, initialAmounts);
         deployedTokens.push(address(token));
         return address(token);
     }
@@ -23,13 +24,12 @@ contract TokenFactory {
 
 contract TimelockFactory {
     address[] public deployedTimelocks;
-
-    function deployTimelock(address admin) public returns (address) {
+    function deployTimelock(address admin, uint256 executionDelay) public returns (address) {
         address[] memory proposers;
         address[] memory executors;
 
         TimelockController timelock = new TimelockController(
-            0,              // Minimum delay for execution, can be customized
+            executionDelay, // Minimum delay for execution, can be customized
             proposers,      // Empty proposers array
             executors,      // Empty executors array
             admin           // Admin role set to the provided admin
@@ -58,7 +58,6 @@ contract DAOFactory {
 }
 
 
-
 contract WrapperContract {
     TokenFactory tokenFactory;
     TimelockFactory timelockFactory;
@@ -66,6 +65,7 @@ contract WrapperContract {
     address[] public deployedDAOs;
     address[] public deployedTokens;
     address[] public deployedTimelocks;
+    address[] public deployedRegistries;
 
     constructor(
         address _tokenFactory,
@@ -77,20 +77,38 @@ contract WrapperContract {
         daoFactory = DAOFactory(_daoFactory);
     }
 
+    function getNumberOfDAOs() public view returns (uint) {
+        return deployedDAOs.length;
+    }
+
     function deployDAOwithToken(
         string memory name,
         string memory symbol,
+        uint8 decimals,
+        uint256 executionDelay,
         address[] memory initialMembers,
         uint256[] memory initialAmounts,
         uint48 minsDelay,
         uint32 minsVoting
-    ) public {
-        address token = tokenFactory.deployToken(name, symbol, initialMembers, initialAmounts);
-        address timelock = timelockFactory.deployTimelock(msg.sender);
+    ) public payable{
+        // Deploy the token, timelock, and DAO contracts
+        address token = tokenFactory.deployToken(name, symbol, decimals ,initialMembers, initialAmounts);
+        address timelock = timelockFactory.deployTimelock(address(this), executionDelay);
         address dao = daoFactory.deployDAO(token, timelock, name, minsDelay, minsVoting);
+        Registry reg = new Registry(dao);
+        // Store deployed addresses
         deployedDAOs.push(dao);
         deployedTokens.push(address(token));
         deployedTimelocks.push(address(timelock));
-        // Logic to store addresses can be handled by individual factories if needed
+        deployedRegistries.push(address(reg));
+        // Grant proposer and executor roles to the DAO contract
+        // Make the DAO the admin of the token (for burning and minting)
+        HBEVM_token tokenContract = HBEVM_token(token);
+        tokenContract.setAdmin(dao);
+        TimelockController timelockController = TimelockController(payable(timelock));
+        bytes32 proposerRole = timelockController.PROPOSER_ROLE();
+        bytes32 executorRole = timelockController.EXECUTOR_ROLE();
+        timelockController.grantRole(proposerRole, dao);
+        timelockController.grantRole(executorRole, dao);
     }
 }

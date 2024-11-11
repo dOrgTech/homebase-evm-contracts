@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.26+commit.8a97fa7a"
+		"version": "0.8.24+commit.e11b9ed9"
 	},
 	"language": "Solidity",
 	"output": {
@@ -16,6 +16,11 @@
 						"internalType": "string",
 						"name": "symbol",
 						"type": "string"
+					},
+					{
+						"internalType": "uint8",
+						"name": "decimals_",
+						"type": "uint8"
 					},
 					{
 						"internalType": "address[]",
@@ -405,6 +410,19 @@
 				"type": "function"
 			},
 			{
+				"inputs": [],
+				"name": "admin",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
 				"inputs": [
 					{
 						"internalType": "address",
@@ -469,6 +487,24 @@
 					}
 				],
 				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "from",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "burn",
+				"outputs": [],
+				"stateMutability": "nonpayable",
 				"type": "function"
 			},
 			{
@@ -709,6 +745,19 @@
 				"type": "function"
 			},
 			{
+				"inputs": [],
+				"name": "isTransferable",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
 				"inputs": [
 					{
 						"internalType": "address",
@@ -821,6 +870,19 @@
 				"type": "function"
 			},
 			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "newAdmin",
+						"type": "address"
+					}
+				],
+				"name": "setAdmin",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
 				"inputs": [],
 				"name": "symbol",
 				"outputs": [
@@ -850,12 +912,12 @@
 				"inputs": [
 					{
 						"internalType": "address",
-						"name": "to",
+						"name": "recipient",
 						"type": "address"
 					},
 					{
 						"internalType": "uint256",
-						"name": "value",
+						"name": "amount",
 						"type": "uint256"
 					}
 				],
@@ -874,17 +936,17 @@
 				"inputs": [
 					{
 						"internalType": "address",
-						"name": "from",
+						"name": "sender",
 						"type": "address"
 					},
 					{
 						"internalType": "address",
-						"name": "to",
+						"name": "recipient",
 						"type": "address"
 					},
 					{
 						"internalType": "uint256",
-						"name": "value",
+						"name": "amount",
 						"type": "uint256"
 					}
 				],
@@ -1093,12 +1155,6 @@
 				},
 				"totalSupply()": {
 					"details": "See {IERC20-totalSupply}."
-				},
-				"transfer(address,uint256)": {
-					"details": "See {IERC20-transfer}. Requirements: - `to` cannot be the zero address. - the caller must have a balance of at least `value`."
-				},
-				"transferFrom(address,address,uint256)": {
-					"details": "See {IERC20-transferFrom}. Emits an {Approval} event indicating the updated allowance. This is not required by the EIP. See the note at the beginning of {ERC20}. NOTE: Does not update the allowance if the current allowance is the maximum `uint256`. Requirements: - `from` and `to` cannot be the zero address. - `from` must have a balance of at least `value`. - the caller must have allowance for ``from``'s tokens of at least `value`."
 				}
 			},
 			"version": 1
@@ -1113,13 +1169,13 @@
 		"compilationTarget": {
 			"contracts/Token.sol": "HBEVM_token"
 		},
-		"evmVersion": "cancun",
+		"evmVersion": "shanghai",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": false,
+			"enabled": true,
 			"runs": 200
 		},
 		"remappings": []
@@ -1326,11 +1382,11 @@
 			]
 		},
 		"contracts/Token.sol": {
-			"keccak256": "0x2c2977384c73ceac0b0c6ed148b33d34b49b2d2c5b4603ec84e63ccca6d8da62",
+			"keccak256": "0xc85ea05a119af40f170ac9bf3cfe4733ca16cc1ecb75ea320b05db53531549a8",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://fc341170026723036ce3195de87027ac88aeb5749f557734791259b34c5cb8a2",
-				"dweb:/ipfs/QmdHP7snFpfeL8AmDWHDC3JYLKxa8SCdUpMwXbWJtRD1HB"
+				"bzz-raw://360026b88ef626aaaad196ab7fc844f2d4ba0e4661d19bd235d37f1ff99366d7",
+				"dweb:/ipfs/QmdF2CaQ371xoFQxxq1jFmjgjbGCAwZiLiEQpV6t6BDHux"
 			]
 		}
 	},

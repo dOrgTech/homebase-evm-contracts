@@ -16,6 +16,21 @@
 						"internalType": "contract TimelockController",
 						"name": "_timelock",
 						"type": "address"
+					},
+					{
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"internalType": "uint48",
+						"name": "minsDelay",
+						"type": "uint48"
+					},
+					{
+						"internalType": "uint32",
+						"name": "minsVoting",
+						"type": "uint32"
 					}
 				],
 				"stateMutability": "nonpayable",
@@ -2221,11 +2236,11 @@
 			]
 		},
 		"contracts/Dao.sol": {
-			"keccak256": "0x531099dcaa6f8b4268a9d89dbb9514352110d4aae13e5a38365bd64b2de8a279",
+			"keccak256": "0x15e81f269d76a6750ef8fc53fdd881d3c479b4fbb641dcb048a806ddf58614f1",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://f02049166f9128e4f9e34e7546f5af68ca14ed1d281a8995f1d0d02c6c72b55b",
-				"dweb:/ipfs/QmZxdyWWgZM47Qfj2F87taaDgS8jbJzQSHZKXmPVkwMbXM"
+				"bzz-raw://74bb42fde65f9b3422b828861825ce8f209b2f37d88d3abad4a9333e1d829454",
+				"dweb:/ipfs/QmNtoPAhP9Rdb4Cn8LcHVbyQdiKdcYXanTXVCzfP7zi92K"
 			]
 		}
 	},
