@@ -18,12 +18,14 @@ constructor(
         TimelockController _timelock,
         string memory name,
         uint48 minsDelay,
-        uint32 minsVoting
+        uint32 minsVoting,
+        uint256 pThreshold,
+        uint8 qvrm
     )
         Governor(name)
-        GovernorSettings(minsDelay * 1 minutes, minsVoting * 1 minutes, 1) 
+        GovernorSettings(minsDelay * 1 minutes, minsVoting * 1 minutes, pThreshold) 
         GovernorVotes(_token)
-        GovernorVotesQuorumFraction(4)
+        GovernorVotesQuorumFraction(qvrm)
         GovernorTimelockControl(_timelock)
     {}
 

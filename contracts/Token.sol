@@ -25,7 +25,7 @@ contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes {
         _decimals = decimals_;
         isTransferable = false;
         adminSet = false;
-        require(initialMembers.length == initialAmounts.length, "Mismatched initial arrays");
+        // require(initialMembers.length == initialAmounts.length, "Mismatched initial arrays");
 
         for (uint32 i = 0; i < initialMembers.length; i++) {
             _mint(initialMembers[i], initialAmounts[i]);

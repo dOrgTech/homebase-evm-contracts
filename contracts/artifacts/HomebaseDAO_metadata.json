@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.26+commit.8a97fa7a"
+		"version": "0.8.24+commit.e11b9ed9"
 	},
 	"language": "Solidity",
 	"output": {
@@ -31,6 +31,16 @@
 						"internalType": "uint32",
 						"name": "minsVoting",
 						"type": "uint32"
+					},
+					{
+						"internalType": "uint256",
+						"name": "pThreshold",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint8",
+						"name": "qvrm",
+						"type": "uint8"
 					}
 				],
 				"stateMutability": "nonpayable",
@@ -1919,13 +1929,13 @@
 		"compilationTarget": {
 			"contracts/Dao.sol": "HomebaseDAO"
 		},
-		"evmVersion": "cancun",
+		"evmVersion": "shanghai",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": false,
+			"enabled": true,
 			"runs": 200
 		},
 		"remappings": []
@@ -2236,11 +2246,11 @@
 			]
 		},
 		"contracts/Dao.sol": {
-			"keccak256": "0x15e81f269d76a6750ef8fc53fdd881d3c479b4fbb641dcb048a806ddf58614f1",
+			"keccak256": "0x48040ad90460a4a96ce52afdc9f1770d90110395bde9283f2e57d07e7bb107a4",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://74bb42fde65f9b3422b828861825ce8f209b2f37d88d3abad4a9333e1d829454",
-				"dweb:/ipfs/QmNtoPAhP9Rdb4Cn8LcHVbyQdiKdcYXanTXVCzfP7zi92K"
+				"bzz-raw://eb09814f0c3253bac4add6c634c9e9a69ef935b25b6e10b2395a68abf5e969ce",
+				"dweb:/ipfs/QmamHVNMP9HbSo7QGFkR5HfN72nJc8PRv5rBaWf6soEunb"
 			]
 		}
 	},
