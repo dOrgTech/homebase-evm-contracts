@@ -6,6 +6,7 @@ import "./Registry.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "./Dao.sol";
 
+
 contract TokenFactory {
     address[] public deployedTokens;
     function deployToken(
@@ -106,7 +107,7 @@ function deployDAOwithToken(
     address timelock = timelockFactory.deployTimelock(address(this), executionDelay);
     address dao = daoFactory.deployDAO(token, timelock, name, initialAmounts);
 
-    Registry reg = new Registry(dao);
+    Registry reg = new Registry(timelock);
 
     // Store deployed addresses
     deployedDAOs.push(dao);
@@ -124,5 +125,31 @@ function deployDAOwithToken(
     timelockController.grantRole(executorRole, dao);
 }
 
+}
 
+
+contract Controller {
+    function executeTransaction(
+        address target,
+        uint256 value,
+        bytes calldata data
+    ) external returns (bytes memory) {
+        (bool success, bytes memory result) = target.call{value: value}(data);
+        require(success, "Transaction execution failed");
+        return result;
+    }
+}
+
+contract StringChanger {
+    string public myString;
+
+    // Constructor to set an initial value for the string (optional)
+    constructor(string memory initialString) {
+        myString = initialString;
+    }
+
+    // Function to update the string with a new value
+    function updateString(string calldata newString) public {
+        myString = newString;
+    }
 }
