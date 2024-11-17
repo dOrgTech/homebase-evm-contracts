@@ -36,6 +36,10 @@ contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes {
         return _decimals;
     }
 
+    function CLOCK_MODE() public pure override returns (string memory) {
+        return "mode=timestamp";
+    }
+
     modifier onlyOwner {
         require(msg.sender == admin, "Only admin can perform this action");
         _;
