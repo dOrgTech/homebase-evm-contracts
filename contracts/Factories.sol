@@ -42,7 +42,6 @@ contract TimelockFactory {
 
 contract DAOFactory {
     address[] public deployedDAOs;
-
     function deployDAO(address tokenAddress, address timelockAddress,
     string memory name, uint[] memory initialAmounts
     ) public returns (address) {
@@ -89,67 +88,111 @@ contract WrapperContract {
         return deployedDAOs.length;
     }
 
-function deployDAOwithToken(
-    string memory name,
-    string memory symbol,
-    uint8 decimals,
+event NewDaoCreated(
+    address indexed dao,
+    address token,
+    address[] initialMembers,
+    uint256[] initialAmounts,
+    string name,
+    string symbol,
+    string description,
     uint256 executionDelay,
-    address[] memory initialMembers,
-    uint256[] memory initialAmounts // This array will include both member amounts and settings
-) public payable {
-    // Ensure `initialAmounts` has the required length (members + 4 for settings)
-    require(initialAmounts.length >= initialMembers.length + 4, "Insufficient settings data in initialAmounts array");
+    address registry,
+    string[] keys,
+    string[] values
+);
 
-    // Deploy the token, passing `initialAmounts` directly
-    address token = tokenFactory.deployToken(name, symbol, decimals, initialMembers, initialAmounts);
+struct DaoParams {
+    string name;
+    string symbol;
+    string description;
+    uint8 decimals;
+    uint256 executionDelay;
+    address[] initialMembers;
+    uint256[] initialAmounts;
+    string[] keys;
+    string[] values;
+}
 
-    // Deploy other contracts as before
-    address timelock = timelockFactory.deployTimelock(address(this), executionDelay);
-    address dao = daoFactory.deployDAO(token, timelock, name, initialAmounts);
+function deployDAOwithToken(DaoParams memory params) public payable {
+    // Validate array lengths
+    require(
+        params.initialAmounts.length >= params.initialMembers.length + 4,
+        "Insufficient settings data in initialAmounts array"
+    );
 
-    Registry reg = new Registry(timelock);
+    // Deploy token contract
+    address token = tokenFactory.deployToken(
+        params.name,
+        params.symbol,
+        params.decimals,
+        params.initialMembers,
+        params.initialAmounts
+    );
 
+    // Deploy timelock contract
+    address timelock = timelockFactory.deployTimelock(
+        address(this),
+        params.executionDelay
+    );
+
+    // Deploy DAO contract
+    address dao = daoFactory.deployDAO(
+        token,
+        timelock,
+        params.name,
+        params.initialAmounts
+    );
+
+    // Deploy registry
+    Registry reg = new Registry(timelock, address(this));
+
+    // Continue deployment and grant roles
+    _finalizeDeployment(dao, token, timelock, address(reg), params.keys, params.values);
+
+    // Emit event for DAO creation
+    emit NewDaoCreated(
+        dao,
+        token,
+        params.initialMembers,
+        params.initialAmounts,
+        params.name,
+        params.symbol,
+        params.description,
+        params.executionDelay,
+        address(reg),
+        params.keys,
+        params.values
+    );
+}
+
+function _finalizeDeployment(
+    address dao,
+    address token,
+    address timelock,
+    address registry,
+    string[] memory keys,
+    string[] memory values
+) internal {
     // Store deployed addresses
     deployedDAOs.push(dao);
-    deployedTokens.push(address(token));
-    deployedTimelocks.push(address(timelock));
-    deployedRegistries.push(address(reg));
+    deployedTokens.push(token);
+    deployedTimelocks.push(timelock);
+    deployedRegistries.push(registry);
 
-    // Grant roles and make DAO the admin as before
-    HBEVM_token tokenContract = HBEVM_token(token);
-    tokenContract.setAdmin(dao);
+    // Set admin for token contract
+    HBEVM_token(token).setAdmin(dao);
+
+    // Grant roles to DAO
     TimelockController timelockController = TimelockController(payable(timelock));
-    bytes32 proposerRole = timelockController.PROPOSER_ROLE();
-    bytes32 executorRole = timelockController.EXECUTOR_ROLE();
-    timelockController.grantRole(proposerRole, dao);
-    timelockController.grantRole(executorRole, dao);
+    timelockController.grantRole(timelockController.PROPOSER_ROLE(), dao);
+    timelockController.grantRole(timelockController.EXECUTOR_ROLE(), dao);
+
+    // Batch-edit registry
+    Registry(registry).batchEditRegistry(keys, values);
 }
 
-}
 
 
-contract Controller {
-    function executeTransaction(
-        address target,
-        uint256 value,
-        bytes calldata data
-    ) external returns (bytes memory) {
-        (bool success, bytes memory result) = target.call{value: value}(data);
-        require(success, "Transaction execution failed");
-        return result;
-    }
-}
 
-contract StringChanger {
-    string public myString;
-
-    // Constructor to set an initial value for the string (optional)
-    constructor(string memory initialString) {
-        myString = initialString;
-    }
-
-    // Function to update the string with a new value
-    function updateString(string calldata newString) public {
-        myString = newString;
-    }
 }

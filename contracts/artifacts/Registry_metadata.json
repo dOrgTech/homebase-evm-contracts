@@ -11,10 +11,33 @@
 						"internalType": "address",
 						"name": "_owner",
 						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_wrapper",
+						"type": "address"
 					}
 				],
 				"stateMutability": "nonpayable",
 				"type": "constructor"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string[]",
+						"name": "newKeys",
+						"type": "string[]"
+					},
+					{
+						"internalType": "string[]",
+						"name": "values",
+						"type": "string[]"
+					}
+				],
+				"name": "batchEditRegistry",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
 			},
 			{
 				"inputs": [
@@ -91,6 +114,19 @@
 				],
 				"stateMutability": "view",
 				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "wrapper",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
 			}
 		],
 		"devdoc": {
@@ -121,11 +157,11 @@
 	},
 	"sources": {
 		"contracts/Registry.sol": {
-			"keccak256": "0x7d6cbfeb3d08c7ca942ae5e65c9eb4b992a9aebc0da39deb2a6c957cdce99c27",
+			"keccak256": "0x627b2743e9c034b13d89f38e1b440507913a34a19077559bab6aa97bb31fd700",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://2d0c9e237e81e710b4f44e64780612e5feecb0c601321ab4d15010584fe1b17b",
-				"dweb:/ipfs/QmZHU4LX6qQo73uQSj9shW1ZWU86FLVqUAVnkqYoQ89zMo"
+				"bzz-raw://b773ed63ba3044d6a025f7cb03430a2c89bfa96a1bc401608277589e75c47785",
+				"dweb:/ipfs/QmfSoVzeWyMwwGAAHCKrW41batS9ijjUTve6FrZHFEYSXs"
 			]
 		}
 	},
