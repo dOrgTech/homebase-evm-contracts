@@ -1,0 +1,78 @@
+{
+	"compiler": {
+		"version": "0.8.24+commit.e11b9ed9"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "recipient",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "transfer",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/Registry.sol": "IERC20"
+		},
+		"evmVersion": "shanghai",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"@openzeppelin/contracts/utils/ReentrancyGuard.sol": {
+			"keccak256": "0xf980daa263b661ab8ddee7d4fd833c7da7e7995e2c359ff1f17e67e4112f2236",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://7448ab095d6940130bcf76ba47a2eab14148c83119523b93dd89f6d84edd6c02",
+				"dweb:/ipfs/QmawrZ4voKQjH3oomXT3Kuheb3Mnmo2VvVpxg8Ne5UJUrd"
+			]
+		},
+		"contracts/Registry.sol": {
+			"keccak256": "0x177c6ccab3ea18e461c3d1fe8920a0692e3dfba8d4ca41158da14ba73dad7ed8",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://06238df8b4e34ad40439898228648e29425c081e84226b7d77d48c5431d84d0f",
+				"dweb:/ipfs/QmRUaL9A9ki8nyR2kMNDnBHKrLLqXJfpQySVUi6x5ZJJGF"
+			]
+		}
+	},
+	"version": 1
+}

@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.26+commit.8a97fa7a"
+		"version": "0.8.24+commit.e11b9ed9"
 	},
 	"language": "Solidity",
 	"output": {
@@ -1929,13 +1929,13 @@
 		"compilationTarget": {
 			"contracts/Dao.sol": "HomebaseDAO"
 		},
-		"evmVersion": "cancun",
+		"evmVersion": "shanghai",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": false,
+			"enabled": true,
 			"runs": 200
 		},
 		"remappings": []
@@ -2246,11 +2246,11 @@
 			]
 		},
 		"contracts/Dao.sol": {
-			"keccak256": "0x48040ad90460a4a96ce52afdc9f1770d90110395bde9283f2e57d07e7bb107a4",
+			"keccak256": "0xa8dbd12da7c3e85b73ce33d130ee2f3c8d11c4d9af3713d9d5551eee5a2e4952",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://eb09814f0c3253bac4add6c634c9e9a69ef935b25b6e10b2395a68abf5e969ce",
-				"dweb:/ipfs/QmamHVNMP9HbSo7QGFkR5HfN72nJc8PRv5rBaWf6soEunb"
+				"bzz-raw://53a43f6169a544eb7a1aeddad25e1268b21de037ac2ddc18e54d275440dc74bf",
+				"dweb:/ipfs/QmPagtye2Uhbks7ACzHju7datZoQ3DCgr5YRRHbhrhbn9W"
 			]
 		}
 	},

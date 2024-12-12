@@ -48,6 +48,10 @@ contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes {
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
     }
+    
+    function clock() public view override returns (uint48) {
+        return uint48(block.timestamp);
+    }
 
     function burn(address from, uint256 amount) public onlyOwner {
         _burn(from, amount);

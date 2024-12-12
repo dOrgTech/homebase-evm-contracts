@@ -1,85 +1,111 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+// Compatible with OpenZeppelin Contracts ^5.0.0
+pragma solidity ^0.8.22;
 
-contract SimpleDAO {
-    address public owner;
-    mapping(address => uint256) public shares;
-    uint256 public totalShares;
-    uint256 public proposalCount;
-    uint256 votes=0;
-    string latestProposalHash;
-    struct Proposal {
-        string description;
-        uint256 voteCount;
-        bool executed;
+import {Governor} from "@openzeppelin/contracts/governance/Governor.sol";
+import {GovernorCountingSimple} from "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
+import {GovernorSettings} from "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
+import {GovernorTimelockControl} from "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
+import {GovernorVotes} from "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
+import {GovernorVotesQuorumFraction} from "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+
+/// @custom:security-contact andrei@dorg.tech
+contract MyGovernor is Governor, GovernorSettings, GovernorCountingSimple, GovernorVotes, GovernorVotesQuorumFraction, GovernorTimelockControl {
+    constructor(IVotes _token, TimelockController _timelock)
+        Governor("MyGovernor")
+        GovernorSettings(15 minutes, 2 minutes, 0)
+        GovernorVotes(_token)
+        GovernorVotesQuorumFraction(4)
+        GovernorTimelockControl(_timelock)
+    {}
+
+    // The following functions are overrides required by Solidity.
+
+    function votingDelay()
+        public
+        view
+        override(Governor, GovernorSettings)
+        returns (uint256)
+    {
+        return super.votingDelay();
     }
 
-    Proposal[] public proposals;
-    
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not the owner");
-        _;
+    function votingPeriod()
+        public
+        view
+        override(Governor, GovernorSettings)
+        returns (uint256)
+    {
+        return super.votingPeriod();
     }
 
-    constructor() {
-        owner = msg.sender;
+    function quorum(uint256 blockNumber)
+        public
+        view
+        override(Governor, GovernorVotesQuorumFraction)
+        returns (uint256)
+    {
+        return super.quorum(blockNumber);
     }
 
-    // Function to receive Ether directly
-    receive() external payable {
-        shares[msg.sender] += msg.value;
-        totalShares += msg.value;
+    function state(uint256 proposalId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (ProposalState)
+    {
+        return super.state(proposalId);
     }
 
-    // Alternative payable fallback function (optional)
-    fallback() external payable {
-        shares[msg.sender] += msg.value;
-        totalShares += msg.value;
+    function proposalNeedsQueuing(uint256 proposalId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (bool)
+    {
+        return super.proposalNeedsQueuing(proposalId);
     }
 
-    function execute(address payable towhom, uint256 howMuch) public payable{
-        payable(towhom).transfer(howMuch);
+    function proposalThreshold()
+        public
+        view
+        override(Governor, GovernorSettings)
+        returns (uint256)
+    {
+        return super.proposalThreshold();
     }
 
-    function vote()public{
-        votes=votes+1;
+    function _queueOperations(uint256 proposalId, address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 descriptionHash)
+        internal
+        override(Governor, GovernorTimelockControl)
+        returns (uint48)
+    {
+        return super._queueOperations(proposalId, targets, values, calldatas, descriptionHash);
     }
 
-    function deposit() public payable {
-        require(msg.value > 0, "Must send ETH");
-        shares[msg.sender] += msg.value;
-        totalShares += msg.value;
+    function _executeOperations(uint256 proposalId, address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 descriptionHash)
+        internal
+        override(Governor, GovernorTimelockControl)
+    {
+        super._executeOperations(proposalId, targets, values, calldatas, descriptionHash);
     }
 
-    function createProposal(string memory description) public {
-        proposals.push(Proposal({
-            description: description,
-            voteCount: 0,
-            executed: false
-        }));
-        proposalCount++;
+    function _cancel(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 descriptionHash)
+        internal
+        override(Governor, GovernorTimelockControl)
+        returns (uint256)
+    {
+        return super._cancel(targets, values, calldatas, descriptionHash);
     }
 
-    function queueProposal(string memory proposalHash)public {
-        votes=votes+1;
-       latestProposalHash = proposalHash;
-    }
-
-    function executeProposal(uint256 proposalIndex) public onlyOwner {
-        Proposal storage proposal = proposals[proposalIndex];
-        require(!proposal.executed, "Already executed");
-        require(proposal.voteCount > totalShares / 2, "Not enough votes");
-
-        proposal.executed = true;
-    }
-
-
-    function withdraw() public {
-        uint256 share = shares[msg.sender];
-        require(share > 0, "No shares to withdraw");
-
-        shares[msg.sender] = 0;
-        totalShares -= share;
-        payable(msg.sender).transfer(share);
+    function _executor()
+        internal
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (address)
+    {
+        return super._executor();
     }
 }

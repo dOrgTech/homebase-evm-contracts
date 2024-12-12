@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./Token.sol";
-import "./Registry.sol";
-import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "./Dao.sol";
+import "./Registry.sol";
+import "./Token.sol";
+import "@openzeppelin/contracts/governance/TimelockController.sol";
 
 
 contract TokenFactory {
@@ -148,7 +148,7 @@ function deployDAOwithToken(DaoParams memory params) public payable {
     Registry reg = new Registry(timelock, address(this));
 
     // Continue deployment and grant roles
-    _finalizeDeployment(dao, token, timelock, address(reg), params.keys, params.values);
+    _finalizeDeployment(dao, token, timelock, payable(address(reg)), params.keys, params.values);
 
     // Emit event for DAO creation
     emit NewDaoCreated(
@@ -170,7 +170,7 @@ function _finalizeDeployment(
     address dao,
     address token,
     address timelock,
-    address registry,
+    address payable registry,
     string[] memory keys,
     string[] memory values
 ) internal {
@@ -179,10 +179,8 @@ function _finalizeDeployment(
     deployedTokens.push(token);
     deployedTimelocks.push(timelock);
     deployedRegistries.push(registry);
-
     // Set admin for token contract
-    HBEVM_token(token).setAdmin(dao);
-
+    HBEVM_token(token).setAdmin(timelock);
     // Grant roles to DAO
     TimelockController timelockController = TimelockController(payable(timelock));
     timelockController.grantRole(timelockController.PROPOSER_ROLE(), dao);
@@ -190,9 +188,6 @@ function _finalizeDeployment(
 
     // Batch-edit registry
     Registry(registry).batchEditRegistry(keys, values);
-}
-
-
-
+    }
 
 }
