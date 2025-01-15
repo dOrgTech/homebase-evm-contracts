@@ -1,10 +1,49 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
-
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+
+contract MyNFT is ERC721, Ownable {
+    using Strings for uint256;
+
+    uint256 public constant TOTAL_SUPPLY = 7;
+    uint256 public mintedCount;
+
+    mapping(uint256 => string) private _tokenURIs;
+
+    constructor() ERC721("MyNFT", "MNFT") Ownable(msg.sender) {
+        // Mint all tokens to the contract owner
+        for (uint256 i = 1; i <= TOTAL_SUPPLY; i++) {
+            _safeMint(msg.sender, i);
+            // _setTokenURI(i, string(abi.encodePacked("https://raw.githubusercontent.com/project-snooze/test/refs/heads/master/metadata/", i.toString(), ".json")));
+            _setTokenURI(i, string(abi.encodePacked("https://raw.githubusercontent/metadata/", i.toString(), ".json")));
+        }
+        mintedCount = TOTAL_SUPPLY;
+    }
+
+    function _setTokenURI(uint256 tokenId, string memory uri) internal {
+        require(_exists(tokenId), "ERC721Metadata: URI set of nonexistent token");
+        _tokenURIs[tokenId] = uri;
+    }
+
+ 
+
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+        return _tokenURIs[tokenId];
+    }
+
+    function _exists(uint256 tokenId) internal view returns (bool) {
+        return _ownerOf(tokenId) != address(0);
+    }
+}
+
+
 
 contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes {
     uint8 private _decimals;

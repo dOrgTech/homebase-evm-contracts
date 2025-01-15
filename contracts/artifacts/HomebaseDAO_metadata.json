@@ -2246,11 +2246,11 @@
 			]
 		},
 		"contracts/Dao.sol": {
-			"keccak256": "0xa8dbd12da7c3e85b73ce33d130ee2f3c8d11c4d9af3713d9d5551eee5a2e4952",
+			"keccak256": "0xa813a7291ac8f33690ee85de0f257fbb4400fce4c4e4d9941f057c0affb6a4ee",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://53a43f6169a544eb7a1aeddad25e1268b21de037ac2ddc18e54d275440dc74bf",
-				"dweb:/ipfs/QmPagtye2Uhbks7ACzHju7datZoQ3DCgr5YRRHbhrhbn9W"
+				"bzz-raw://823eec66b7012973b06aa2d82d7d5181927fc6e0397959da5d8dc174def1823e",
+				"dweb:/ipfs/QmTtr4ppVhjVDjsxX3xu2AAW5NfodZGPbxX4W5rcJkQUx4"
 			]
 		}
 	},
