@@ -1,4 +1,4 @@
-# README: Debate Smart Contract
+# Debate Smart Contract
 
 ## Introduction
 
