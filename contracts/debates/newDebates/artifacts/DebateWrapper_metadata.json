@@ -1,0 +1,152 @@
+{
+	"compiler": {
+		"version": "0.8.26+commit.8a97fa7a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "debateAddress",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "author",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "string",
+						"name": "title",
+						"type": "string"
+					},
+					{
+						"indexed": false,
+						"internalType": "bool",
+						"name": "isBinary",
+						"type": "bool"
+					},
+					{
+						"indexed": false,
+						"internalType": "bytes32",
+						"name": "rootArgHash",
+						"type": "bytes32"
+					},
+					{
+						"indexed": false,
+						"internalType": "string",
+						"name": "rootArgText",
+						"type": "string"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "rootWeight",
+						"type": "uint256"
+					}
+				],
+				"name": "NewDebate",
+				"type": "event"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "_title",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "_rootArgText",
+						"type": "string"
+					},
+					{
+						"internalType": "bool",
+						"name": "_isBinary",
+						"type": "bool"
+					},
+					{
+						"internalType": "address",
+						"name": "_token",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_rootWeight",
+						"type": "uint256"
+					}
+				],
+				"name": "createDebate",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"details": "This contract deploys new Debate contracts and emits events for indexing.      The user calls `createDebate` to start a new debate (passing the root argument text),      then we deploy a new Debate contract which internally does the hashing.",
+			"kind": "dev",
+			"methods": {
+				"createDebate(string,string,bool,address,uint256)": {
+					"params": {
+						"_isBinary": "True => standard pro/con root, false => free-for-all (top-level is always pro)",
+						"_rootArgText": "The FULL text of the root argument",
+						"_rootWeight": "The user-assigned weight for the root argument",
+						"_title": "The human-readable title of the debate",
+						"_token": "The address of the iVotes-compatible ERC20 (OpenZeppelin ERC20Votes)"
+					}
+				}
+			},
+			"title": "DebateWrapper",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"createDebate(string,string,bool,address,uint256)": {
+					"notice": "Deploy a new Debate contract with the given parameters."
+				}
+			},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/debates/newDebates/DebateWrapper.sol": "DebateWrapper"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"contracts/debates/newDebates/Debate.sol": {
+			"keccak256": "0xb34cf3f5f09466a840739c1655e7853e8eb91b64d227c8c530567bcce4b6d08d",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://a9d6901a1acb4d66165d5f43bd50dc775729f3f84d52b0a47a7b3c64c0a307bc",
+				"dweb:/ipfs/Qme5JBz3hGmDGAFHLrebUeMNBjaNMqqa6FSa5LhXvXw3KW"
+			]
+		},
+		"contracts/debates/newDebates/DebateWrapper.sol": {
+			"keccak256": "0x35e646e66a6a44b0b7ceb7f8ea6654c98018eea2e16be790b9e342749ae04e03",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://8cddf55470ab89eadca1c90b884383441284c4e3f300080a6a58d4eafe5bc08b",
+				"dweb:/ipfs/QmWEcAQagJ17Bev3HShrdQ6dhitTLGVQKAxGDRm5gicAz7"
+			]
+		}
+	},
+	"version": 1
+}

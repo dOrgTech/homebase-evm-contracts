@@ -1,0 +1,296 @@
+{
+	"compiler": {
+		"version": "0.8.26+commit.8a97fa7a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "_title",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "_rootArgText",
+						"type": "string"
+					},
+					{
+						"internalType": "bool",
+						"name": "_isBinary",
+						"type": "bool"
+					},
+					{
+						"internalType": "address",
+						"name": "_token",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_rootWeight",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "author",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "bytes32",
+						"name": "argHash",
+						"type": "bytes32"
+					},
+					{
+						"indexed": false,
+						"internalType": "bytes32",
+						"name": "parentHash",
+						"type": "bytes32"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum Debate.OptionType",
+						"name": "option",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "weight",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "string",
+						"name": "fullText",
+						"type": "string"
+					}
+				],
+				"name": "ArgumentAdded",
+				"type": "event"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "_argText",
+						"type": "string"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "_parentHash",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "enum Debate.OptionType",
+						"name": "_option",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_weight",
+						"type": "uint256"
+					}
+				],
+				"name": "addArgument",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					}
+				],
+				"name": "arguments",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "author",
+						"type": "address"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "parentHash",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "uint256",
+						"name": "weight",
+						"type": "uint256"
+					},
+					{
+						"internalType": "enum Debate.OptionType",
+						"name": "option",
+						"type": "uint8"
+					},
+					{
+						"internalType": "bool",
+						"name": "exists",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getRootArgHash",
+				"outputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "isBinary",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "referenceBlock",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "title",
+				"outputs": [
+					{
+						"internalType": "string",
+						"name": "",
+						"type": "string"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "token",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"name": "usedWeight",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"details": "Stores arguments by hashing their text in the contract, but also      emits an event with the full text for off-chain indexing.      Enforces \"no more than your voting power\" usage at creation block.",
+			"kind": "dev",
+			"methods": {
+				"addArgument(string,bytes32,uint8,uint256)": {
+					"details": "Add a new argument to the debate",
+					"params": {
+						"_argText": "The full text of the argument",
+						"_option": "0=PRO,1=CON",
+						"_parentHash": "The hash of the parent argument",
+						"_weight": "The user-assigned weight"
+					}
+				},
+				"constructor": {
+					"details": "Deploy a new Debate.",
+					"params": {
+						"_isBinary": "If true => top-level can be pro/con, else => top-level is effectively pro",
+						"_rootArgText": "The full text of the root argument",
+						"_rootWeight": "Weight assigned to the root argument",
+						"_title": "The title of the debate",
+						"_token": "The iVotes-compatible token"
+					}
+				},
+				"getRootArgHash()": {
+					"details": "Return the hash of the root argument for reference"
+				}
+			},
+			"title": "Debate",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/debates/newDebates/Debate.sol": "Debate"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"contracts/debates/newDebates/Debate.sol": {
+			"keccak256": "0xb34cf3f5f09466a840739c1655e7853e8eb91b64d227c8c530567bcce4b6d08d",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://a9d6901a1acb4d66165d5f43bd50dc775729f3f84d52b0a47a7b3c64c0a307bc",
+				"dweb:/ipfs/Qme5JBz3hGmDGAFHLrebUeMNBjaNMqqa6FSa5LhXvXw3KW"
+			]
+		}
+	},
+	"version": 1
+}

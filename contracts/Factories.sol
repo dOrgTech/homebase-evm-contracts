@@ -4,8 +4,7 @@ pragma solidity ^0.8.24;
 import "./Dao.sol";
 import "./Registry.sol";
 import "./Token.sol";
-import "@openzeppelin/contracts/governance/TimelockController.sol";
-
+import "@openzeppelin/contracts/governance/TimelockController.sol"; 
 
 contract TokenFactory {
     address[] public deployedTokens;
@@ -14,9 +13,10 @@ contract TokenFactory {
         string memory symbol,
         uint8 decimals,
         address[] memory initialMembers,
-        uint256[] memory initialAmounts
+        uint256[] memory initialAmounts,
+        bool transferrable
     ) public returns (address) {
-        HBEVM_token token = new HBEVM_token(name, symbol, decimals,initialMembers, initialAmounts);
+        HBEVM_token token = new HBEVM_token(name, symbol, decimals,initialMembers, initialAmounts,transferrable);
         deployedTokens.push(address(token));
         return address(token);
     }
@@ -112,6 +112,7 @@ struct DaoParams {
     uint256[] initialAmounts;
     string[] keys;
     string[] values;
+    bool transferrable;
 }
 
 function deployDAOwithToken(DaoParams memory params) public payable {
@@ -127,7 +128,8 @@ function deployDAOwithToken(DaoParams memory params) public payable {
         params.symbol,
         params.decimals,
         params.initialMembers,
-        params.initialAmounts
+        params.initialAmounts,
+        params.transferrable
     );
 
     // Deploy timelock contract
@@ -174,6 +176,7 @@ function _finalizeDeployment(
     string[] memory keys,
     string[] memory values
 ) internal {
+    
     // Store deployed addresses
     deployedDAOs.push(dao);
     deployedTokens.push(token);

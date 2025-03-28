@@ -31,6 +31,11 @@
 						"internalType": "uint256[]",
 						"name": "initialAmounts",
 						"type": "uint256[]"
+					},
+					{
+						"internalType": "bool",
+						"name": "transferrable",
+						"type": "bool"
 					}
 				],
 				"stateMutability": "nonpayable",
@@ -1438,11 +1443,11 @@
 			]
 		},
 		"contracts/Token.sol": {
-			"keccak256": "0x65cf74c0a1a3c572613987e24fac31adcc4a3c7f65075600c481660a215614ee",
+			"keccak256": "0xb476a1b7ad167db02f8cbb6374a1edcc5e05833de06c21b47532e9dedd19d970",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://15e754f3d1318bcd8b218bf35cef2f622b3d61b67a158e89c126188de1c9d3a9",
-				"dweb:/ipfs/QmT3xmPi3ookkb3RHoUUYq8TwJKmMoZp4Xnjha1Bmsm7Wa"
+				"bzz-raw://a46305a7404dc7067c437644ac115602c2d4622a8baeed3fb1983373b35475b8",
+				"dweb:/ipfs/QmRSkA6Hp7MpzT1rUpXsAKeuZ3aZBwbMRmcBaimUzK6YzD"
 			]
 		}
 	},
