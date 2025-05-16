@@ -1,16 +1,15 @@
+// contracts/Token.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
-import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
+import {IAdminToken} from "./IAdminToken.sol"; 
     
-contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes {
+contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes, IAdminToken { 
     uint8 private _decimals;
-    address public admin;
+    address public override admin; 
     bool public isTransferable;
     bool private adminSet;
 
@@ -19,7 +18,7 @@ contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes {
         string memory symbol,
         uint8 decimals_,
         address[] memory initialMembers,
-        uint256[] memory initialAmounts,
+        uint256[] memory initialAmounts, // These are mintAmounts, already sliced by TokenFactory
         bool transferrable
     ) 
         ERC20(name, symbol)
@@ -28,10 +27,15 @@ contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes {
         _decimals = decimals_;
         isTransferable = transferrable;
         adminSet = false;
-        // require(initialMembers.length == initialAmounts.length, "Mismatched initial arrays");
-
+        
+        // Mint initial tokens to members
+        // The TokenFactory is responsible for passing an `initialAmounts` array
+        // that corresponds in length to `initialMembers`.
         for (uint32 i = 0; i < initialMembers.length; i++) {
-            _mint(initialMembers[i], initialAmounts[i]);
+            // Defensive check, though TokenFactory should ensure lengths match for minting part.
+            if (i < initialAmounts.length) { 
+                 _mint(initialMembers[i], initialAmounts[i]);
+            }
         }
     }
 
@@ -44,7 +48,7 @@ contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes {
     }
 
     modifier onlyOwner {
-        require(msg.sender == admin, "Only admin can perform this action");
+        require(msg.sender == admin, "HBEVM_token: caller is not the admin");
         _;
     }
 
@@ -61,9 +65,9 @@ contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes {
     }
 
     // Function to set the admin, callable only once
-    function setAdmin(address newAdmin) public {
-        require(admin == address(0), "Admin has already been set");
-        require(newAdmin != address(0), "New admin address cannot be zero");
+    function setAdmin(address newAdmin) public override { 
+        require(!adminSet, "HBEVM_token: admin has already been set"); 
+        require(newAdmin != address(0), "HBEVM_token: new admin address cannot be zero");
         admin = newAdmin;
         adminSet = true;
     }
@@ -82,14 +86,22 @@ contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes {
     }
 
     // Override the transfer function to restrict based on isTransferable
+    // If not transferable, only admin can transfer.
     function transfer(address recipient, uint256 amount) public override returns (bool) {
-        require(isTransferable, "Transfers are currently disabled");
+        if (!isTransferable) {
+            require(msg.sender == admin, "HBEVM_token: transfers disabled for non-admin");
+        }
         return super.transfer(recipient, amount);
     }
 
     // Override the transferFrom function to restrict based on isTransferable
-    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
-        require(isTransferable, "Transfers are currently disabled");
-        return super.transferFrom(sender, recipient, amount);
+    // If not transferable, only admin can act as operator.
+    function transferFrom(address from, address recipient, uint256 amount) public override returns (bool) {
+        // 'from' is the token owner, 'msg.sender' is the operator.
+        if (!isTransferable) {
+            require(msg.sender == admin, "HBEVM_token: transferFrom disabled for non-admin operator");
+        }
+        return super.transferFrom(from, recipient, amount);
     }
 }
+// Token.sol

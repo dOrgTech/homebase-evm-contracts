@@ -21,7 +21,7 @@ async function updateConfigFile(newData) {
   config.DAO_ADDRESS = newData.daoAddress || config.DAO_ADDRESS;
 
   // Generate the new content for config.js by preserving existing keys
-  const newConfigContent = `
+  const newConfigContent = ` 
     module.exports = {
       AUTHOR: '0xc5C77EC5A79340f0240D6eE8224099F664A08EEb',
       CONTRACTOR: '0xA6A40E0b6DB5a6f808703DBe91DbE50B7FC1fa3E',
