@@ -527,11 +527,11 @@
 			]
 		},
 		"contracts/Factories.sol": {
-			"keccak256": "0x8c0885758db30d27f8649a7335de7317975adad7390d9efa8f61041fbeb16ed5",
+			"keccak256": "0x90653af35dde8dec8d6b48a4b830686703a883ae5e38ec4234ff6d258f79947c",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://36b642e5de50781a40b01c43b561bb7506d78c3bfe7fb904cf36b5137ae9f06a",
-				"dweb:/ipfs/QmYEhdtCzp4eJTvScYCPrkqWobg3zUncRGZo6dkAADK268"
+				"bzz-raw://fee97eed602ffad916015d8bcd016d9aad5914db6a08fd5954779d1af27da304",
+				"dweb:/ipfs/QmUDQQNA5t8yinV6up9kk38rNdXPhNx5n7H51ZG6kGTAe4"
 			]
 		},
 		"contracts/HBEVM_Wrapped_Token.sol": {

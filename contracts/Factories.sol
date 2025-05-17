@@ -16,18 +16,16 @@ contract TokenFactory {
     address[] public deployedWrappedTokens; 
 
     function deployToken(
-        string memory name,
+        string memory name, // Name for the token
         string memory symbol,
         uint8 decimals,
         address[] memory initialMembers,
-        uint256[] memory combinedInitialAmounts, // Contains mint amounts for members + DAO settings
+        uint256[] memory combinedInitialAmounts, 
         bool transferrable
     ) public returns (address) {
-        // Extract only the amounts for initial members for minting
         uint256 membersCount = initialMembers.length;
         uint256[] memory mintAmounts = new uint256[](membersCount);
         for (uint i = 0; i < membersCount; i++) {
-            // Assuming combinedInitialAmounts is long enough as checked by WrapperContract
             mintAmounts[i] = combinedInitialAmounts[i];
         }
 
@@ -67,9 +65,9 @@ contract TimelockFactory {
 
 contract DAOFactory {
     address[] public deployedDAOs;
-    // Reverted to take daoSettingsArray as the WrapperContract will prepare this
     function deployDAO(address tokenAddress, address timelockAddress,
-    string memory name, uint[] memory daoSettingsArray 
+    string memory name, // Name for the DAO
+    uint[] memory daoSettingsArray 
     ) public returns (address) {
         require(daoSettingsArray.length == 4, "DAOFactory: DAO settings array must have 4 elements");
         uint48 minsDelay = uint48(daoSettingsArray[0]);    
@@ -80,7 +78,7 @@ contract DAOFactory {
         HomebaseDAO dao = new HomebaseDAO(
             IVotes(tokenAddress), 
             TimelockController(payable(timelockAddress)),
-            name,
+            name, // DAO's name
             minsDelay,
             minsVoting,
             pThreshold,
@@ -115,34 +113,31 @@ contract WrapperContract {
         return deployedDAOs.length;
     }
 
-    // Event signatures simplified in previous attempts, keeping them simple for now
     event NewDaoCreated(
         address indexed dao,
         address token,
-        string daoName, 
+        string name, // Single name for DAO & Token as per original behavior
         string tokenSymbol, 
         uint256 executionDelay,
         address registry
-        // If you need more data, add it back, but be mindful if errors reappear
     );
 
     event NewDaoWithWrappedTokenCreated(
         address indexed dao,
         address wrappedToken,
         address underlyingToken,
-        string daoName,
+        string daoName, // For wrapped, DAO can have its own name distinct from wrapped token
         string wrappedTokenName,
         string wrappedTokenSymbol,
         uint256 executionDelay,
         address registry
     );
 
-    // Original struct that was compiling fine
+    // Reverted DaoParams to use a single 'name' field
     struct DaoParams {
-        string tokenName;       
-        string daoName;         
-        string symbol;          
-        string description;     // Used for registry, not directly for DAO/Token contract names
+        string name;            // Used for BOTH Token name and DAO name
+        string symbol;          // Symbol for the new governance token
+        string description;     // Description for the registry
         uint8 decimals;         
         uint256 executionDelay; 
         address[] initialMembers;       
@@ -152,6 +147,7 @@ contract WrapperContract {
         bool transferrable;     
     }
 
+    // DaoParamsWrapped remains as it was, as it's for the new functionality
     struct DaoParamsWrapped {
         string daoName;                 
         string wrappedTokenName;        
@@ -167,7 +163,6 @@ contract WrapperContract {
         string[] values;
     }
 
-    // Restoring deployDAOwithToken to use its struct, as this was compiling
     function deployDAOwithToken(DaoParams memory params) public payable {
         require(
             params.initialMembers.length <= params.initialAmounts.length,
@@ -178,99 +173,85 @@ contract WrapperContract {
             "Wrapper: Insufficient settings data in initialAmounts"
         );
 
-        // Deploy token contract
-        // TokenFactory's deployToken will handle extracting mintAmounts from params.initialAmounts
+        // Deploy token contract using params.name for the token's name
         address token = tokenFactory.deployToken(
-            params.tokenName, // Name for the new token
-            params.symbol,    // Symbol for the new token
+            params.name,    // TOKEN NAME
+            params.symbol,
             params.decimals,
             params.initialMembers,
-            params.initialAmounts, // Pass the combined array
+            params.initialAmounts, 
             params.transferrable
         );
 
-        // Deploy timelock contract
         address timelock = timelockFactory.deployTimelock(
             address(this), 
             params.executionDelay
         );
         
-        // Prepare DAO settings array for DAOFactory from the combined initialAmounts
         uint256[] memory daoSettingsArray = new uint256[](4);
         uint256 len = params.initialAmounts.length;
-        daoSettingsArray[0] = params.initialAmounts[len - 4]; // minsDelay
-        daoSettingsArray[1] = params.initialAmounts[len - 3]; // minsVoting
-        daoSettingsArray[2] = params.initialAmounts[len - 2]; // pThreshold
-        daoSettingsArray[3] = params.initialAmounts[len - 1]; // qvrm
+        daoSettingsArray[0] = params.initialAmounts[len - 4]; 
+        daoSettingsArray[1] = params.initialAmounts[len - 3]; 
+        daoSettingsArray[2] = params.initialAmounts[len - 2]; 
+        daoSettingsArray[3] = params.initialAmounts[len - 1]; 
 
-        // Deploy DAO contract
+        // Deploy DAO contract using params.name for the DAO's name
         address dao = daoFactory.deployDAO(
             token,
             timelock,
-            params.daoName, // Name for the DAO
+            params.name,    // DAO NAME
             daoSettingsArray
         );
 
-        // Deploy registry
-        // The registry's owner is the timelock, wrapper is this contract for initial setup
         Registry reg = new Registry(timelock, address(this)); 
         address payable registryAddress = payable(address(reg));
 
-        // Finalize core deployment (setting roles, etc.)
         _finalizeCoreDeployment(dao, token, timelock, registryAddress);
 
-        // Batch-edit registry using keys/values from params
-        // The 'params.description' can be one of the key/value pairs if needed, e.g., keys=["description"], values=[params.description]
         if (params.keys.length > 0) {
              Registry(registryAddress).batchEditRegistry(params.keys, params.values);
         }
-
+        // The event emits the single 'name' used for both, and the token's symbol
         emit NewDaoCreated(
             dao,
             token,
-            params.daoName,
-            params.symbol, // Token symbol
+            params.name, // Emitting the common name
+            params.symbol, 
             params.executionDelay,
             registryAddress
         );
     }
 
     function deployDAOwithWrappedToken(DaoParamsWrapped memory params) public payable {
-        // Deploy wrapped token contract
         address wrappedToken = tokenFactory.deployWrappedToken(
             IERC20(params.underlyingTokenAddress),
             params.wrappedTokenName,
             params.wrappedTokenSymbol
         );
 
-        // Deploy timelock contract
         address timelock = timelockFactory.deployTimelock(
             address(this), 
             params.executionDelay
         );
 
-        // Prepare DAO settings array for DAOFactory
         uint256[] memory daoSettingsArray = new uint256[](4);
         daoSettingsArray[0] = params.minsVotingDelay;
         daoSettingsArray[1] = params.minsVotingPeriod;
         daoSettingsArray[2] = params.proposalThreshold;
         daoSettingsArray[3] = params.quorumFraction;
 
-        // Deploy DAO contract
         address dao = daoFactory.deployDAO(
             wrappedToken,
             timelock,
-            params.daoName,
+            params.daoName, // For wrapped, DAO has its explicit name
             daoSettingsArray
         );
 
-        // Deploy registry
         Registry reg = new Registry(timelock, address(this));
         address payable registryAddress = payable(address(reg));
 
         _finalizeCoreDeployment(dao, wrappedToken, timelock, registryAddress);
 
-        // Batch-edit registry
         if (params.keys.length > 0) {
             Registry(registryAddress).batchEditRegistry(params.keys, params.values);
         }
@@ -287,7 +268,6 @@ contract WrapperContract {
         );
     }
 
-    // This internal function has a small, manageable stack footprint
     function _finalizeCoreDeployment(
         address dao,
         address token, 
@@ -306,8 +286,6 @@ contract WrapperContract {
         timelockController.grantRole(timelockController.EXECUTOR_ROLE(), dao); 
         
         // TODO: Decentralize Timelock Admin Role
-        // timelockController.grantRole(timelockController.TIMELOCK_ADMIN_ROLE(), dao);
-        // timelockController.renounceRole(timelockController.TIMELOCK_ADMIN_ROLE(), address(this));
     }
 }
 // Factories.sol
