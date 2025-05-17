@@ -1,0 +1,59 @@
+{
+	"compiler": {
+		"version": "0.8.24+commit.e11b9ed9"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "newAdmin",
+						"type": "address"
+					}
+				],
+				"name": "setAdmin",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/IAdminToken.sol": "IAdminToken"
+		},
+		"evmVersion": "shanghai",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"contracts/IAdminToken.sol": {
+			"keccak256": "0xe871a7879320346f7d85be998391b9e49f8354cc2517298c4aaa7cb30cbe87e8",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://f9e3215b4b1b2b1f40dbd2e818bd1807c91309eb9719629265727b7925b5e699",
+				"dweb:/ipfs/QmRuQzq7dCdXYwZHBe3CgCG8cYMmpsKSAgsAox2y972Ftu"
+			]
+		}
+	},
+	"version": 1
+}
