@@ -1,8 +1,8 @@
 // contracts/Factories_W.sol
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24; // Consistent pragma
+pragma solidity ^0.8.24; 
 
-// Imports for dependent contracts and interfaces
+// Imports
 import "./Dao.sol"; 
 import "./Registry.sol"; 
 import "./HBEVM_Wrapped_Token.sol"; 
@@ -11,6 +11,7 @@ import {IAdminToken} from "./IAdminToken.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+// Interfaces for Factories
 interface ITokenFactory {
     function deployWrappedToken(
         IERC20 underlyingToken,
@@ -42,28 +43,29 @@ contract WrapperContract_W {
     address[] public deployedTimelocks_W;
     address[] public deployedRegistries_W;
 
-    // VERY LEAN event for wrapped token DAO creation to avoid stack issues
-    event NewDaoWrappedInfo( // Renamed to be distinct and simple
-        address indexed dao,
-        address indexed wrappedToken,
-        address indexed underlyingToken,
-        string daoName, // Essential info
-        address registryAddress // Essential info
+    // Revised Minimal Event - Swapped underlyingTokenAddress for description
+    event DaoWrappedDeploymentInfo( // Renamed slightly for clarity of this version
+        address indexed daoAddress,
+        address indexed wrappedTokenAddress,
+        // address indexed underlyingTokenAddress, // REMOVED - can be read from wrappedTokenAddress
+        address registryAddress,
+        string daoName, 
+        string description // ADDED
     );
 
     struct DaoParamsWrapped {
         string daoName;                 
         string wrappedTokenName;        
         string wrappedTokenSymbol;      
-        string description;             // Will be set in registry, not critical for this lean event
+        string description;             // This will be emitted
         uint256 executionDelay;         
         address underlyingTokenAddress; 
-        uint48 minsVotingDelay;         // DAO setting, can be queried
-        uint32 minsVotingPeriod;        // DAO setting, can be queried
-        uint256 proposalThreshold;      // DAO setting, can be queried
-        uint8 quorumFraction;           // DAO setting, can be queried
-        string[] keys;                  // For registry
-        string[] values;                // For registry
+        uint48 minsVotingDelay;         
+        uint32 minsVotingPeriod;        
+        uint256 proposalThreshold;      
+        uint8 quorumFraction;           
+        string[] keys;                  
+        string[] values;                
     }
 
     constructor(
@@ -99,13 +101,14 @@ contract WrapperContract_W {
 
         _finalizeDeployment_W(dao, wrappedToken, timelock, registryAddress, params.keys, params.values);
 
-        // Emit the new, lean event
-        emit NewDaoWrappedInfo(
+        // Emit the revised minimal event
+        emit DaoWrappedDeploymentInfo(
             dao, 
             wrappedToken, 
-            params.underlyingTokenAddress,
+            // params.underlyingTokenAddress, // REMOVED from emit
+            registryAddress,
             params.daoName,
-            registryAddress // Only essential, directly available info
+            params.description // ADDED to emit
         );
     }
 

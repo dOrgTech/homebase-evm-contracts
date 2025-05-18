@@ -1,0 +1,6 @@
+!contracts
+**/artifacts/
+**/debates/
+contracts/Test.sol
+contracts/Jurisdiction.sol
+contracts/nft.sol

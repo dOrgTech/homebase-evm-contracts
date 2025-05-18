@@ -32,19 +32,19 @@
 					{
 						"indexed": true,
 						"internalType": "address",
-						"name": "dao",
+						"name": "daoAddress",
 						"type": "address"
 					},
 					{
 						"indexed": true,
 						"internalType": "address",
-						"name": "wrappedToken",
+						"name": "wrappedTokenAddress",
 						"type": "address"
 					},
 					{
-						"indexed": true,
+						"indexed": false,
 						"internalType": "address",
-						"name": "underlyingToken",
+						"name": "registryAddress",
 						"type": "address"
 					},
 					{
@@ -55,12 +55,24 @@
 					},
 					{
 						"indexed": false,
-						"internalType": "address",
-						"name": "registryAddress",
-						"type": "address"
+						"internalType": "string",
+						"name": "wrappedTokenSymbol",
+						"type": "string"
+					},
+					{
+						"indexed": false,
+						"internalType": "string",
+						"name": "description",
+						"type": "string"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint8",
+						"name": "quorumFraction",
+						"type": "uint8"
 					}
 				],
-				"name": "NewDaoWrappedInfo",
+				"name": "DaoWrappedDeploymentInfo",
 				"type": "event"
 			},
 			{
@@ -70,11 +82,6 @@
 							{
 								"internalType": "string",
 								"name": "daoName",
-								"type": "string"
-							},
-							{
-								"internalType": "string",
-								"name": "wrappedTokenName",
 								"type": "string"
 							},
 							{
@@ -241,7 +248,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/Factories_W.sol": "WrapperContract_W"
+			"contracts/Factories.sol": "WrapperContract_W"
 		},
 		"evmVersion": "shanghai",
 		"libraries": {},
@@ -695,12 +702,12 @@
 				"dweb:/ipfs/QmTtr4ppVhjVDjsxX3xu2AAW5NfodZGPbxX4W5rcJkQUx4"
 			]
 		},
-		"contracts/Factories_W.sol": {
-			"keccak256": "0xf91e65dd63ec9ce1d1f9d4f63cf1fb8ff6c13c5a58b28209d9c08daa8ba05210",
+		"contracts/Factories.sol": {
+			"keccak256": "0xfae4262e52a64c507200e0d5206149e5867e2ae94df2dadfc839c8b5368b95d0",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://8074e4f54646a2d69527f80a8c5d8b95c4c00fad148d806f8743b1447780ef2f",
-				"dweb:/ipfs/QmWHEbyCpPEMtTuASuRXmR6uMX9q8MoSEKfexGwofkCRZd"
+				"bzz-raw://0b08c34cb7eb3ca8b9773740afdfe6eed20aafecaac67873aa029026331331f4",
+				"dweb:/ipfs/QmYa7bLhhoWbj3NhR6osryCscejNbVERAco9GQDoLQVsEz"
 			]
 		},
 		"contracts/HBEVM_Wrapped_Token.sol": {
