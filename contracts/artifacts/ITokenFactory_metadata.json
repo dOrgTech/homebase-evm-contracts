@@ -48,7 +48,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/Factories.sol": "ITokenFactory"
+			"contracts/Factories_W.sol": "ITokenFactory"
 		},
 		"evmVersion": "shanghai",
 		"libraries": {},
@@ -495,19 +495,19 @@
 			]
 		},
 		"contracts/Dao.sol": {
-			"keccak256": "0xa813a7291ac8f33690ee85de0f257fbb4400fce4c4e4d9941f057c0affb6a4ee",
+			"keccak256": "0x7460df5758e9163b3d0e4a37abd6ae52eda8d8b899ab67e728a2e1d8d27f16ed",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://823eec66b7012973b06aa2d82d7d5181927fc6e0397959da5d8dc174def1823e",
-				"dweb:/ipfs/QmTtr4ppVhjVDjsxX3xu2AAW5NfodZGPbxX4W5rcJkQUx4"
+				"bzz-raw://929efd9cd56e4b9ac320e1c611ccf6fc7104b2b7c09b74770a14e49ec3b5e1da",
+				"dweb:/ipfs/QmUmLQ4Rg5aeNGSaZcPaoF5AAVVtJ5AafVPbcvaakBQpcw"
 			]
 		},
-		"contracts/Factories.sol": {
-			"keccak256": "0xfae4262e52a64c507200e0d5206149e5867e2ae94df2dadfc839c8b5368b95d0",
+		"contracts/Factories_W.sol": {
+			"keccak256": "0x737596d0e10db5ce1c927229b380059a8260b9d51c8a1368cecb640c252f37d2",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://0b08c34cb7eb3ca8b9773740afdfe6eed20aafecaac67873aa029026331331f4",
-				"dweb:/ipfs/QmYa7bLhhoWbj3NhR6osryCscejNbVERAco9GQDoLQVsEz"
+				"bzz-raw://58cadaa3eb607d40c13efecb2be18038591fd090eff28ac6f94eba7ff3f19655",
+				"dweb:/ipfs/QmTg5Qa8ed9NwLeNjumhhsxBwDfyuKmRZSpNZVAY4pMJ8K"
 			]
 		},
 		"contracts/HBEVM_Wrapped_Token.sol": {

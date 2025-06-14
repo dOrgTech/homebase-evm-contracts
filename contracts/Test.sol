@@ -2,9 +2,9 @@
 pragma solidity ^0.8.0;
 
 contract MyToken {
-    string public name = "My Token";
-    string public symbol = "MTK";
-    uint8 public decimals = 6;
+    string public name = "Aster";
+    string public symbol = "Ast";
+    uint8 public decimals = 2;
     uint256 public totalSupply;
 
     mapping(address => uint256) public balanceOf;

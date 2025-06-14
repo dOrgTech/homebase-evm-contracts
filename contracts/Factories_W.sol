@@ -7,7 +7,7 @@ import "./Dao.sol";
 import "./Registry.sol"; 
 import "./HBEVM_Wrapped_Token.sol"; 
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {IAdminToken} from "./IAdminToken.sol"; 
+import {IAdminToken} from "./IAdminToken.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface ITokenFactory {
     function deployWrappedToken(
         IERC20 underlyingToken,
-        string memory wrappedTokenName,
+        string memory wrappedTokenName, // Will be same as daoName
         string memory wrappedTokenSymbol
     ) external returns (address);
 }
@@ -28,7 +28,7 @@ interface IDAOFactory {
     function deployDAO( 
         address tokenAddress,
         address timelockAddress,
-        string memory name,
+        string memory name, // DAO Name
         uint[] memory daoSettingsArray 
     ) external returns (address);
 }
@@ -43,27 +43,27 @@ contract WrapperContract_W {
     address[] public deployedTimelocks_W;
     address[] public deployedRegistries_W;
 
-    // Revised Minimal Event - Swapped underlyingTokenAddress for description
-    event DaoWrappedDeploymentInfo( // Renamed slightly for clarity of this version
+    event DaoWrappedDeploymentInfo( 
         address indexed daoAddress,
         address indexed wrappedTokenAddress,
-        // address indexed underlyingTokenAddress, // REMOVED - can be read from wrappedTokenAddress
         address registryAddress,
-        string daoName, 
-        string description // ADDED
+        string daoName,         // Used for DAO and Wrapped Token Name
+        string wrappedTokenSymbol, // Still need symbol for wrapped token
+        string description,
+        uint8 quorumFraction    // ADDED (DAO Setting)
+        // Other DAO settings (voting delay, period, threshold) can be fetched
     );
 
     struct DaoParamsWrapped {
-        string daoName;                 
-        string wrappedTokenName;        
+        string daoName;
         string wrappedTokenSymbol;      
-        string description;             // This will be emitted
+        string description;             
         uint256 executionDelay;         
         address underlyingTokenAddress; 
         uint48 minsVotingDelay;         
         uint32 minsVotingPeriod;        
         uint256 proposalThreshold;      
-        uint8 quorumFraction;           
+        uint8 quorumFraction;           // Will be emitted
         string[] keys;                  
         string[] values;                
     }
@@ -83,8 +83,9 @@ contract WrapperContract_W {
     }
 
     function deployDAOwithWrappedToken(DaoParamsWrapped memory params) public payable {
+        // Use params.daoName for wrappedTokenName
         address wrappedToken = tokenFactory.deployWrappedToken(
-            IERC20(params.underlyingTokenAddress), params.wrappedTokenName, params.wrappedTokenSymbol
+            IERC20(params.underlyingTokenAddress), params.daoName, params.wrappedTokenSymbol
         );
         address timelock = timelockFactory.deployTimelock(address(this), params.executionDelay);
 
@@ -94,6 +95,7 @@ contract WrapperContract_W {
         daoSettingsArray[2] = params.proposalThreshold;
         daoSettingsArray[3] = params.quorumFraction;
 
+        // DAO is deployed with params.daoName
         address dao = daoFactory.deployDAO(wrappedToken, timelock, params.daoName, daoSettingsArray);
         
         Registry reg = new Registry(timelock, address(this)); 
@@ -101,14 +103,14 @@ contract WrapperContract_W {
 
         _finalizeDeployment_W(dao, wrappedToken, timelock, registryAddress, params.keys, params.values);
 
-        // Emit the revised minimal event
         emit DaoWrappedDeploymentInfo(
             dao, 
             wrappedToken, 
-            // params.underlyingTokenAddress, // REMOVED from emit
             registryAddress,
-            params.daoName,
-            params.description // ADDED to emit
+            params.daoName, // Used for both DAO and (implicitly) wrapped token name
+            params.wrappedTokenSymbol,
+            params.description,
+            params.quorumFraction // Emitting quorumFraction
         );
     }
 

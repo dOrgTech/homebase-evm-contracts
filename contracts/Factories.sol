@@ -1,141 +1,181 @@
-// contracts/Factories_W.sol
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24; 
+pragma solidity ^0.8.24; // Matched to your working version
 
-// Imports
-import "./Dao.sol"; 
-import "./Registry.sol"; 
-import "./HBEVM_Wrapped_Token.sol"; 
-import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {IAdminToken} from "./IAdminToken.sol"; 
-import "@openzeppelin/contracts/governance/TimelockController.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// Original imports from your working file
+import "./Dao.sol";
+import "./Registry.sol";
+import "./Token.sol"; // This is your original HBEVM_token
+import "@openzeppelin/contracts/governance/TimelockController.sol"; 
 
-// Interfaces for Factories
-interface ITokenFactory {
+// New imports needed for WrapperContract_W
+import "./HBEVM_Wrapped_Token.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol"; // For DAOFactory with wrapped tokens
+import {IAdminToken} from "./IAdminToken.sol"; // For setting admin on wrapped token
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // For IERC20 type
+
+
+// --- FACTORIES (TokenFactory, TimelockFactory, DAOFactory as previously corrected) ---
+contract TokenFactory {
+    address[] public deployedTokens;
+    address[] public deployedWrappedTokens; 
+
+    function deployToken(
+        string memory name,
+        string memory symbol,
+        uint8 decimals,
+        address[] memory initialMembers,
+        uint256[] memory combinedInitialAmounts, 
+        bool transferrable
+    ) public returns (address) {
+        uint256 membersCount = initialMembers.length;
+        uint256[] memory mintAmounts = new uint256[](membersCount);
+        for (uint i = 0; i < membersCount; i++) {
+            mintAmounts[i] = combinedInitialAmounts[i];
+        }
+        HBEVM_token token = new HBEVM_token(name, symbol, decimals, initialMembers, mintAmounts, transferrable);
+        deployedTokens.push(address(token));
+        return address(token);
+    }
+
     function deployWrappedToken(
         IERC20 underlyingToken,
-        string memory wrappedTokenName, // Will be same as daoName
+        string memory wrappedTokenName,
         string memory wrappedTokenSymbol
-    ) external returns (address);
-}
-
-interface ITimelockFactory {
-    function deployTimelock(address admin, uint256 executionDelay) external returns (address);
-}
-
-interface IDAOFactory {
-    function deployDAO( 
-        address tokenAddress,
-        address timelockAddress,
-        string memory name, // DAO Name
-        uint[] memory daoSettingsArray 
-    ) external returns (address);
-}
-
-contract WrapperContract_W {
-    ITokenFactory tokenFactory;
-    ITimelockFactory timelockFactory;
-    IDAOFactory daoFactory;
-
-    address[] public deployedDAOs_W; 
-    address[] public deployedTokens_W; 
-    address[] public deployedTimelocks_W;
-    address[] public deployedRegistries_W;
-
-    event DaoWrappedDeploymentInfo( 
-        address indexed daoAddress,
-        address indexed wrappedTokenAddress,
-        address registryAddress,
-        string daoName,         // Used for DAO and Wrapped Token Name
-        string wrappedTokenSymbol, // Still need symbol for wrapped token
-        string description,
-        uint8 quorumFraction    // ADDED (DAO Setting)
-        // Other DAO settings (voting delay, period, threshold) can be fetched
-    );
-
-    struct DaoParamsWrapped {
-        string daoName;                 // Will also be used as wrappedTokenName
-        // string wrappedTokenName;     // REMOVED
-        string wrappedTokenSymbol;      
-        string description;             
-        uint256 executionDelay;         
-        address underlyingTokenAddress; 
-        uint48 minsVotingDelay;         
-        uint32 minsVotingPeriod;        
-        uint256 proposalThreshold;      
-        uint8 quorumFraction;           // Will be emitted
-        string[] keys;                  
-        string[] values;                
+    ) public returns (address) {
+        HBEVM_Wrapped_Token wrappedToken = new HBEVM_Wrapped_Token(underlyingToken, wrappedTokenName, wrappedTokenSymbol);
+        deployedWrappedTokens.push(address(wrappedToken));
+        return address(wrappedToken);
     }
+}
+
+contract TimelockFactory {
+    address[] public deployedTimelocks;
+    function deployTimelock(address admin, uint256 executionDelay) public returns (address) {
+        address[] memory proposers;
+        address[] memory executors;
+        TimelockController timelock = new TimelockController(
+            executionDelay, proposers, executors, admin
+        );
+        deployedTimelocks.push(address(timelock));
+        return address(timelock);
+    }
+}
+
+contract DAOFactory {
+    address[] public deployedDAOs;
+    function deployDAO(address tokenAddress, address timelockAddress,
+    string memory name, uint[] memory initialAmounts 
+    ) public returns (address) {
+        require(initialAmounts.length >= 4, "DAOFactory: Insufficient settings in initialAmounts");
+        uint48 minsDelay = uint48(initialAmounts[initialAmounts.length - 4]);
+        uint32 minsVoting = uint32(initialAmounts[initialAmounts.length - 3]);
+        uint256 pThreshold = initialAmounts[initialAmounts.length - 2];
+        uint8 qvrm = uint8(initialAmounts[initialAmounts.length - 1]);
+        
+        HomebaseDAO dao = new HomebaseDAO(
+            IVotes(tokenAddress), 
+            TimelockController(payable(timelockAddress)),
+            name,
+            minsDelay,
+            minsVoting,
+            pThreshold,
+            qvrm
+        );
+        deployedDAOs.push(address(dao));
+        return address(dao);
+    }
+}
+
+// --- ORIGINAL WrapperContract (UNCHANGED from your working version) ---
+contract WrapperContract {
+    TokenFactory tokenFactory;
+    TimelockFactory timelockFactory;
+    DAOFactory daoFactory;
+    address[] public deployedDAOs;
+    address[] public deployedTokens;
+    address[] public deployedTimelocks;
+    address[] public deployedRegistries;
 
     constructor(
         address _tokenFactory,
         address _timelockFactory,
         address _daoFactory
     ) {
-        tokenFactory = ITokenFactory(_tokenFactory);
-        timelockFactory = ITimelockFactory(_timelockFactory);
-        daoFactory = IDAOFactory(_daoFactory);
+        tokenFactory = TokenFactory(_tokenFactory);
+        timelockFactory = TimelockFactory(_timelockFactory);
+        daoFactory = DAOFactory(_daoFactory);
     }
 
-    function getNumberOfDAOs_W() public view returns (uint) {
-        return deployedDAOs_W.length;
+    function getNumberOfDAOs() public view returns (uint) {
+        return deployedDAOs.length;
     }
 
-    function deployDAOwithWrappedToken(DaoParamsWrapped memory params) public payable {
-        // Use params.daoName for wrappedTokenName
-        address wrappedToken = tokenFactory.deployWrappedToken(
-            IERC20(params.underlyingTokenAddress), params.daoName, params.wrappedTokenSymbol
+    event NewDaoCreated( 
+        address indexed dao,
+        address token,
+        address[] initialMembers,
+        uint256[] initialAmounts, 
+        string name,
+        string symbol,
+        string description,
+        uint256 executionDelay,
+        address registry,
+        string[] keys,
+        string[] values
+    );
+
+    struct DaoParams { 
+        string name;
+        string symbol;
+        string description;
+        uint8 decimals;
+        uint256 executionDelay;
+        address[] initialMembers;
+        uint256[] initialAmounts; 
+        string[] keys;
+        string[] values;
+        bool transferrable;
+    }
+
+    function deployDAOwithToken(DaoParams memory params) public payable { 
+        require(
+            params.initialAmounts.length >= params.initialMembers.length + 4,
+            "Insufficient settings data in initialAmounts array"
+        );
+        address token = tokenFactory.deployToken(
+            params.name, params.symbol, params.decimals,
+            params.initialMembers, params.initialAmounts, params.transferrable
         );
         address timelock = timelockFactory.deployTimelock(address(this), params.executionDelay);
+        address dao = daoFactory.deployDAO(token, timelock, params.name, params.initialAmounts);
+        Registry reg = new Registry(timelock, address(this));
+        _finalizeDeployment(dao, token, timelock, payable(address(reg)), params.keys, params.values);
 
-        uint256[] memory daoSettingsArray = new uint256[](4);
-        daoSettingsArray[0] = params.minsVotingDelay;
-        daoSettingsArray[1] = params.minsVotingPeriod;
-        daoSettingsArray[2] = params.proposalThreshold;
-        daoSettingsArray[3] = params.quorumFraction;
-
-        // DAO is deployed with params.daoName
-        address dao = daoFactory.deployDAO(wrappedToken, timelock, params.daoName, daoSettingsArray);
-        
-        Registry reg = new Registry(timelock, address(this)); 
-        address payable registryAddress = payable(address(reg));
-
-        _finalizeDeployment_W(dao, wrappedToken, timelock, registryAddress, params.keys, params.values);
-
-        emit DaoWrappedDeploymentInfo(
-            dao, 
-            wrappedToken, 
-            registryAddress,
-            params.daoName, // Used for both DAO and (implicitly) wrapped token name
-            params.wrappedTokenSymbol,
-            params.description,
-            params.quorumFraction // Emitting quorumFraction
+        emit NewDaoCreated(
+            dao, token, params.initialMembers, params.initialAmounts,
+            params.name, params.symbol, params.description,
+            params.executionDelay, address(reg), params.keys, params.values
         );
     }
 
-    function _finalizeDeployment_W(
+    function _finalizeDeployment( 
         address dao,
-        address token, 
+        address token,
         address timelock,
         address payable registry,
         string[] memory keys,
         string[] memory values
     ) internal {
-        deployedDAOs_W.push(dao);
-        deployedTokens_W.push(token); 
-        deployedTimelocks_W.push(timelock);
-        deployedRegistries_W.push(registry);
-        
-        IAdminToken(token).setAdmin(timelock); 
-
+        deployedDAOs.push(dao);
+        deployedTokens.push(token);
+        deployedTimelocks.push(timelock);
+        deployedRegistries.push(registry);
+        HBEVM_token(token).setAdmin(timelock); 
         TimelockController timelockController = TimelockController(payable(timelock));
         timelockController.grantRole(timelockController.PROPOSER_ROLE(), dao);
-        timelockController.grantRole(timelockController.EXECUTOR_ROLE(), dao); 
+        timelockController.grantRole(timelockController.EXECUTOR_ROLE(), dao);
         if (keys.length > 0) { 
             Registry(registry).batchEditRegistry(keys, values);
         }
     }
 }
-// Factories_W.sol
