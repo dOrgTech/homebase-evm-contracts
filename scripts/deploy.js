@@ -2,42 +2,20 @@ const { ethers } = require("hardhat");
 const fs = require("fs");
 const path = require("path");
 const tokenABI = require("../artifacts/contracts/Token.sol/HBEVM_token.json").abi;
-// Path to the config.js file
-const configPath = path.join(__dirname, "../config.js");
+const hre = require("hardhat");
+const { saveAddresses, loadAddresses } = require("../utils/deployments");
 
-async function updateConfigFile(newData) {
-  // Safely require the config.js file
-  let config;
-  try {
-    config = require(configPath);
-  } catch (err) {
-    // If config.js doesn't exist or has issues, start with an empty object
-    config = {};
-  }
-
-  // Update or add the contract addresses in the config object
-  config.TOKEN_ADDRESS = newData.tokenAddress || config.TOKEN_ADDRESS;
-  config.TIMELOCK_ADDRESS = newData.timeLockAddress || config.TIMELOCK_ADDRESS;
-  config.DAO_ADDRESS = newData.daoAddress || config.DAO_ADDRESS;
-
-  // Generate the new content for config.js by preserving existing keys
-  const newConfigContent = ` 
-    module.exports = {
-      AUTHOR: '0xc5C77EC5A79340f0240D6eE8224099F664A08EEb',
-      CONTRACTOR: '0xA6A40E0b6DB5a6f808703DBe91DbE50B7FC1fa3E',
-      ARBITER: '0x6EF597F8155BC561421800de48852c46e73d9D19',
-      BLOKE: '0x548f66A1063A79E4F291Ebeb721C718DCc7965c5',
-      EIGHT_RICE:'0xa9F8F9C0bf3188cEDdb9684ae28655187552bAE9',
-      INFURA_API_KEY: \`${config.INFURA_API_KEY}\`,
-      SEPOLIA_PRIVATE_KEY: \`${config.SEPOLIA_PRIVATE_KEY}\`,
-      TOKEN_ADDRESS: \`${config.TOKEN_ADDRESS}\`,
-      TIMELOCK_ADDRESS: \`${config.TIMELOCK_ADDRESS}\`,
-      DAO_ADDRESS: \`${config.DAO_ADDRESS}\`
-    };
-  `;
-
-  // Write the updated content back to config.js
-  fs.writeFileSync(configPath, newConfigContent.trim());
+async function writeDeploymentAddresses({ tokenAddress, timeLockAddress, daoAddress }) {
+  const networkName = hre.network.name;
+  const current = loadAddresses(networkName);
+  const next = {
+    ...current,
+    TOKEN_ADDRESS: tokenAddress,
+    TIMELOCK_ADDRESS: timeLockAddress,
+    DAO_ADDRESS: daoAddress,
+  };
+  const file = saveAddresses(networkName, next);
+  console.log(`Saved deployment addresses to ${file}`);
 }
 
 async function main() {
@@ -80,14 +58,14 @@ async function main() {
   await dao.waitForDeployment();
   console.log("HomebaseDAO deployed at:", dao.target);
 
-  // Update the config.js file with the new contract addresses
-  await updateConfigFile({
+  // Persist deployed addresses per network (no secrets)
+  await writeDeploymentAddresses({
     tokenAddress: token.target,
     timeLockAddress: timeLock.target,
     daoAddress: dao.target,
   });
 
-  console.log("Deployment complete and config.js updated.");
+  console.log("Deployment complete and addresses saved.");
 }
 
 main()

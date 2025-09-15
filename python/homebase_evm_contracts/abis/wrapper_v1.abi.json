@@ -1,0 +1,21 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true,  "internalType": "address",     "name": "dao",            "type": "address" },
+      { "indexed": false, "internalType": "address",     "name": "token",          "type": "address" },
+      { "indexed": false, "internalType": "address[]",   "name": "initialMembers", "type": "address[]" },
+      { "indexed": false, "internalType": "uint256[]",   "name": "initialAmounts", "type": "uint256[]" },
+      { "indexed": false, "internalType": "string",      "name": "name",           "type": "string" },
+      { "indexed": false, "internalType": "string",      "name": "symbol",         "type": "string" },
+      { "indexed": false, "internalType": "string",      "name": "description",    "type": "string" },
+      { "indexed": false, "internalType": "uint256",     "name": "executionDelay", "type": "uint256" },
+      { "indexed": false, "internalType": "address",     "name": "registry",       "type": "address" },
+      { "indexed": false, "internalType": "string[]",    "name": "keys",           "type": "string[]" },
+      { "indexed": false, "internalType": "string[]",    "name": "values",         "type": "string[]" }
+    ],
+    "name": "NewDaoCreated",
+    "type": "event"
+  }
+]
+

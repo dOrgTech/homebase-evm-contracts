@@ -1,8 +1,32 @@
 {
   "name": "hardhat-project",
+  "scripts": {
+    "build": "hardhat compile",
+    "clean": "hardhat clean",
+    "test": "npm run test:original && hardhat test dao-tests/*.test.js",
+    "test:original": "hardhat test",
+    "node": "hardhat node",
+
+    "deploy": "hardhat run scripts/deploy.js",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "predeploy:localhost": "npm run build",
+    "predeploy:sepolia": "npm run build",
+
+    "proposal": "hardhat run scripts/makeProposal.js",
+    "proposal:localhost": "hardhat run scripts/makeProposal.js --network localhost",
+    "proposal:sepolia": "hardhat run scripts/makeProposal.js --network sepolia",
+    "preproposal:localhost": "npm run build",
+    "preproposal:sepolia": "npm run build",
+
+    "verify:sepolia": "hardhat verify --network sepolia",
+    "addresses:localhost": "node -e \"console.log(require('./deployments/localhost.json'))\"",
+    "addresses:sepolia": "node -e \"console.log(require('./deployments/sepolia.json'))\""
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.10"
+    "hardhat": "^2.22.10",
+    "dotenv": "^16.4.5"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.2",

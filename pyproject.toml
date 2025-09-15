@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "homebase-evm-contracts"
+version = "0.1.0"
+description = "Curated ABIs for Homebase EVM contracts (Python package)"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{ name = "Homebase" }]
+license = { text = "Proprietary" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: Other/Proprietary License",
+  "Operating System :: OS Independent",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+[tool.setuptools.package-data]
+homebase_evm_contracts = [
+  "abis/*.json",
+]
+
