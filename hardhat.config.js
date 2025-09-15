@@ -1,6 +1,8 @@
 require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
 
-const { INFURA_API_KEY, SEPOLIA_PRIVATE_KEY } = require("./config");
+const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
+const SEPOLIA_PRIVATE_KEY = process.env.SEPOLIA_PRIVATE_KEY || "";
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -14,6 +16,10 @@ module.exports = {
   }
 },
   networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true,
+      chainId: 31337,
+    },
     ganache: {
       url: "http://127.0.0.1:7545",  
       chainId: 1337,                // Your Ganache Chain ID
@@ -24,12 +30,12 @@ module.exports = {
     sepolia: {
       url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
       chainId: 11155111,
-      accounts: [`0x${SEPOLIA_PRIVATE_KEY}`], // Ensure 0x is added here
+      accounts: SEPOLIA_PRIVATE_KEY ? [`0x${SEPOLIA_PRIVATE_KEY}`] : [], // Ensure 0x is added here
     },
     et: {
       url: `https://node.ghostnet.etherlink.com`,
       chainId: 128123,
-      accounts: [`0x${SEPOLIA_PRIVATE_KEY}`], // Ensure 0x is added here
+      accounts: SEPOLIA_PRIVATE_KEY ? [`0x${SEPOLIA_PRIVATE_KEY}`] : [], // Ensure 0x is added here
     },
   }
 };

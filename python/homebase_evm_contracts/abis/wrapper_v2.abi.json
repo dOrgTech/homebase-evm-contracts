@@ -1,0 +1,31 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true,  "internalType": "address", "name": "dao",            "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "token",          "type": "address" },
+      { "indexed": false, "internalType": "string",  "name": "name",           "type": "string" },
+      { "indexed": false, "internalType": "string",  "name": "tokenSymbol",    "type": "string" },
+      { "indexed": false, "internalType": "uint256", "name": "executionDelay", "type": "uint256" },
+      { "indexed": false, "internalType": "address", "name": "registry",       "type": "address" }
+    ],
+    "name": "NewDaoCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true,  "internalType": "address", "name": "dao",                 "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "wrappedToken",        "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "underlyingToken",     "type": "address" },
+      { "indexed": false, "internalType": "string",  "name": "daoName",             "type": "string" },
+      { "indexed": false, "internalType": "string",  "name": "wrappedTokenName",    "type": "string" },
+      { "indexed": false, "internalType": "string",  "name": "wrappedTokenSymbol",  "type": "string" },
+      { "indexed": false, "internalType": "uint256", "name": "executionDelay",      "type": "uint256" },
+      { "indexed": false, "internalType": "address", "name": "registry",            "type": "address" }
+    ],
+    "name": "NewDaoWithWrappedTokenCreated",
+    "type": "event"
+  }
+]
+

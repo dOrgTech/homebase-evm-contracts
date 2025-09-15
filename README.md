@@ -80,6 +80,50 @@ The `WrapperContract` offers two primary methods for DAO creation:
     npm install
     ```
 
+## NPM Scripts
+
+- build: `npx hardhat compile` — compile contracts
+- clean: `npx hardhat clean` — clear cache/artifacts
+- test: `npx hardhat test` — run all tests
+- node: `npx hardhat node` — start local Hardhat node
+- deploy: `npx hardhat run scripts/deploy.js` (use with `--network`)
+  - deploy:localhost: `--network localhost`
+  - deploy:sepolia: `--network sepolia`
+- proposal: `npx hardhat run scripts/makeProposal.js` (use with `--network`)
+  - proposal:localhost / proposal:sepolia
+- verify:sepolia: `npx hardhat verify --network sepolia <address> [ctor-args...]`
+- addresses: Show saved deployments per network:
+  - localhost: `node -e "console.log(require('./deployments/localhost.json'))"`
+  - sepolia: `node -e "console.log(require('./deployments/sepolia.json'))"`
+
+Quick examples
+- Local dev: `npm run node` (in another shell) then `npm run deploy:localhost`
+- Sepolia deploy: `npm run deploy:sepolia` (saves to `deployments/sepolia.json`)
+- Run tests: `npm test`
+
+## Python (ABIs for Indexers)
+
+Install curated ABIs directly from this repo via pip:
+
+```bash
+pip install git+GITREPOLINK
+```
+
+Usage in Python:
+
+```python
+from homebase_evm_contracts import get_abi
+
+wrapper_abi = get_abi("wrapper")          # current Wrapper (v2)
+wrapper_legacy_abi = get_abi("wrapper", "legacy")
+governor_abi = get_abi("governor")        # minimal events: ProposalCreated/Queued/Executed/VoteCast
+token_abi = get_abi("token")              # decimals, totalSupply, balanceOf + events
+```
+
+Notes:
+- The shipped ABIs are minimal and tailored for indexers (events and common reads).
+- If you need the full Hardhat artifacts, use the JSONs under `contracts/artifacts/`.
+
 ## Deployment
 
 ### 1. Deploying Core Factories

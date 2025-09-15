@@ -1,17 +1,11 @@
 const { ethers } = require("hardhat");
+const hre = require("hardhat");
 const governorABI = require("../artifacts/contracts/Dao.sol/HomebaseDAO.json").abi;
-const fs = require("fs");
-const path = require("path");
-const configPath = path.join(__dirname, "../config.js");
+const { loadAddresses } = require("../utils/deployments");
 
 async function main() {
-  let config;
-  try {
-    config = require(configPath);
-  } catch (err) {
-    // If config.js doesn't exist or has issues, start with an empty object
-    config = {};
-  }
+  const networkName = hre.network.name;
+  const config = loadAddresses(networkName);
 
   // Get the proposer account
   const [proposer] = await ethers.getSigners();
