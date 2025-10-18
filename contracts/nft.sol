@@ -7,7 +7,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MyToken is ERC20 {
-    constructor() ERC20("CoreyToken", "CTK") {
+    constructor() ERC20("Something", "STG") {
         _mint(0x04a17B7caf38F718af5625AA00c22793a82A8050, 1000000 * 10 ** decimals());
     }
 }
