@@ -1,3 +1,4 @@
+// contracts/Registry.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -11,6 +12,10 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
     string[] private keys;
     address public owner;
     address public wrapper;
+
+    // --- NEW FOR JURISDICTION ---
+    address public jurisdictionAddress;
+    mapping(bytes32 => uint256) public earmarkedFunds;
 
     modifier _treasuryOps(){
          require(msg.sender == owner , "Only the DAO can make transfers");
@@ -27,6 +32,12 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
     event TransferredETH(address indexed to, uint256 amount);
     event TransferredERC20(address indexed token, address indexed to, uint256 amount);
     event TransferredERC721(address indexed token, address indexed to, uint256 tokenId);
+    
+    // --- NEW JURISDICTION EVENTS ---
+    event JurisdictionAddressSet(address indexed jurisdiction);
+    event FundsEarmarked(bytes32 indexed purpose, uint256 amount);
+    event EarmarkedFundsDisbursed(address indexed recipient, bytes32 indexed purpose, uint256 amount);
+
 
      receive() external payable {
         emit ReceivedETH(msg.sender, msg.value);
@@ -37,22 +48,17 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         uint256 tokenId,
         bytes calldata data
     ) external override returns (bytes4) {
-        // Silence unused parameter warnings
         operator; data;
         emit ReceivedERC721(from, msg.sender, tokenId);
         return this.onERC721Received.selector;
     }
 
-    // Transfer ETH
     function transferETH(address payable to, uint256 amount) _treasuryOps external nonReentrant {
         require(address(this).balance >= amount, "Insufficient balance");
-        uint256 initialBalance = address(this).balance;
         to.transfer(amount);
-        require(address(this).balance == initialBalance - amount, "Transfer failed");
         emit TransferredETH(to, amount);
     }
 
-    // Transfer ERC20 tokens
     function transferERC20(
         address token,
         address to,
@@ -63,23 +69,13 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         emit TransferredERC20(token, to, amount);
     }
 
-    // Transfer ERC721 tokens
     function transferERC721(
         address token,
         address to,
         uint256 tokenId
     ) external _treasuryOps {
-        require(isERC721(token), "Token is not a valid ERC721");
         IERC721(token).safeTransferFrom(address(this), to, tokenId);
         emit TransferredERC721(token, to, tokenId);
-    }
-
-    function isERC721(address token) internal returns (bool) {
-        try IERC721(token).safeTransferFrom(address(this), address(this), 0) {
-            return true;
-        } catch {
-            return false;
-        }
     }
     
     constructor(address _owner, address _wrapper) {
@@ -92,7 +88,7 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
 
     function editRegistry(string memory key, string memory value) public _regedit {
         if (bytes(reg[key]).length == 0) {
-            keys.push(key); // Only add new keys
+            keys.push(key);
         }
         reg[key] = value;
         emit RegistryUpdated(key, value);
@@ -102,22 +98,16 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         for (uint256 i = 0; i < newKeys.length; i++) {
             string memory key = newKeys[i];
             string memory value = values[i];
-
-            // Check if key already exists in reg
             if (bytes(reg[key]).length == 0) {
                 keys.push(key);
             }
-
-            // Update the value in reg mapping
             reg[key] = value;
         }
     }
 
-
     function getRegistryValue(string memory key) public view returns (string memory) {
         return reg[key];
     }
-
 
     function getAllKeys() public view returns (string[] memory) {
         return keys;
@@ -130,4 +120,28 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         }
         return values;
     }
+
+    // --- NEW FUNCTIONS FOR JURISDICTION ---
+    function setJurisdictionAddress(address _jurisdictionAddress) external _regedit {
+        require(_jurisdictionAddress != address(0), "Jurisdiction address cannot be zero");
+        jurisdictionAddress = _jurisdictionAddress;
+        emit JurisdictionAddressSet(_jurisdictionAddress);
+    }
+
+    function earmarkFunds(bytes32 purpose, uint256 amount, address tokenAddress) external _treasuryOps {
+        uint256 currentBalance = IERC20(tokenAddress).balanceOf(address(this));
+        require(currentBalance >= amount, "Cannot earmark more than total balance");
+        earmarkedFunds[purpose] += amount;
+        emit FundsEarmarked(purpose, amount);
+    }
+
+    function disburseEarmarked(address recipient, uint256 amount, bytes32 purpose, address tokenAddress) external nonReentrant {
+        require(msg.sender == jurisdictionAddress, "Registry: Caller is not the Jurisdiction");
+        require(earmarkedFunds[purpose] >= amount, "Registry: Insufficient earmarked funds");
+        earmarkedFunds[purpose] -= amount;
+        bool success = IERC20(tokenAddress).transfer(recipient, amount);
+        require(success, "ERC20 transfer failed during disbursement");
+        emit EarmarkedFundsDisbursed(recipient, purpose, amount);
+    }
 }
+// Registry.sol

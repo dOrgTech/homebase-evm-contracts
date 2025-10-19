@@ -5,13 +5,14 @@ const { INFURA_API_KEY, SEPOLIA_PRIVATE_KEY } = require("./config");
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
-    version:"0.8.24",
+    version:"0.8.26",
     settings: {
       evmVersion: "cancun",
       optimizer: {
         enabled: true,
         runs: 200, // Same as the value used in Remix
       },
+       viaIR: true,
   }
 },
   networks: {
