@@ -13,7 +13,6 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
     address public owner;
     address public wrapper;
 
-    // --- NEW FOR JURISDICTION ---
     address public jurisdictionAddress;
     mapping(bytes32 => uint256) public earmarkedFunds;
 
@@ -33,9 +32,9 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
     event TransferredERC20(address indexed token, address indexed to, uint256 amount);
     event TransferredERC721(address indexed token, address indexed to, uint256 tokenId);
     
-    // --- NEW JURISDICTION EVENTS ---
     event JurisdictionAddressSet(address indexed jurisdiction);
     event FundsEarmarked(bytes32 indexed purpose, uint256 amount);
+    event EarmarkedFundsWithdrawn(bytes32 indexed purpose, uint256 amount);
     event EarmarkedFundsDisbursed(address indexed recipient, bytes32 indexed purpose, uint256 amount);
 
 
@@ -121,7 +120,6 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         return values;
     }
 
-    // --- NEW FUNCTIONS FOR JURISDICTION ---
     function setJurisdictionAddress(address _jurisdictionAddress) external _regedit {
         require(_jurisdictionAddress != address(0), "Jurisdiction address cannot be zero");
         jurisdictionAddress = _jurisdictionAddress;
@@ -130,14 +128,24 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
 
     function earmarkFunds(bytes32 purpose, uint256 amount, address tokenAddress) external _treasuryOps {
         uint256 currentBalance = IERC20(tokenAddress).balanceOf(address(this));
-        require(currentBalance >= amount, "Cannot earmark more than total balance");
+        require(currentBalance >= earmarkedFunds[purpose] + amount, "Cannot earmark more than available balance");
         earmarkedFunds[purpose] += amount;
         emit FundsEarmarked(purpose, amount);
+    }
+
+    function withdrawEarmarkedFunds(bytes32 purpose, uint256 amount) external _treasuryOps {
+        require(earmarkedFunds[purpose] >= amount, "Registry: Cannot withdraw more than earmarked");
+        earmarkedFunds[purpose] -= amount;
+        emit EarmarkedFundsWithdrawn(purpose, amount);
     }
 
     function disburseEarmarked(address recipient, uint256 amount, bytes32 purpose, address tokenAddress) external nonReentrant {
         require(msg.sender == jurisdictionAddress, "Registry: Caller is not the Jurisdiction");
         require(earmarkedFunds[purpose] >= amount, "Registry: Insufficient earmarked funds");
+        
+        uint256 currentBalance = IERC20(tokenAddress).balanceOf(address(this));
+        require(currentBalance >= amount, "Registry: Insufficient token balance for disbursement");
+
         earmarkedFunds[purpose] -= amount;
         bool success = IERC20(tokenAddress).transfer(recipient, amount);
         require(success, "ERC20 transfer failed during disbursement");

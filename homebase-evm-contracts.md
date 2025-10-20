@@ -2,6 +2,7 @@
 
 - homebase-evm-contracts/
   - contracts/
+    - DAOFactory.sol
     - Dao.sol
     - Factories.sol
     - Factories_W.sol
@@ -9,15 +10,65 @@
     - IAdminToken.sol
     - Jurisdiction.sol
     - Registry.sol
+    - RegistryFactory.sol
     - Settings.sol
+    - TimelockFactory.sol
     - Token.sol
+    - remix.config.json
+    - factories/
+      - DAOFactory.sol
+      - InfrastructureFactory.sol
+      - JurisdictionFactory.sol
+      - TokenFactory.sol
     - mocks/
+      - MockERC20.sol
       - MockERC721.sol
       - MockFactories.sol
       - ReentrantAttacker.sol
       - TargetContract.sol
 
 # File Contents
+
+### `contracts/DAOFactory.sol`
+```sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "./Dao.sol";
+import "@openzeppelin/contracts/governance/TimelockController.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+
+contract DAOFactory {
+    address[] public deployedDAOs;
+
+    function deployDAO(
+        address tokenAddress,
+        address timelockAddress,
+        string memory name,
+        uint[] memory daoSettings
+    ) external returns (address) {
+        require(daoSettings.length >= 4, "DAO settings requires 4 elements");
+        uint48 minsDelay = uint48(daoSettings[0]);
+        uint32 minsVoting = uint32(daoSettings[1]);
+        uint256 pThreshold = daoSettings[2];
+        uint8 qvrm = uint8(daoSettings[3]);
+        
+        HomebaseDAO dao = new HomebaseDAO(
+            IVotes(tokenAddress),
+            TimelockController(payable(timelockAddress)),
+            name,
+            minsDelay,
+            minsVoting,
+            pThreshold,
+            qvrm
+        );
+        deployedDAOs.push(address(dao));
+        return address(dao);
+    }
+}
+// DAOFactory.sol
+```
 
 ### `contracts/Dao.sol`
 ```sol
@@ -139,116 +190,59 @@ constructor(
 
 ### `contracts/Factories.sol`
 ```sol
+// contracts/Factories.sol
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24; // Matched to your working version
+pragma solidity ^0.8.24;
 
-// Original imports from your working file
-import "./Dao.sol";
-import "./Registry.sol";
-import "./Token.sol"; // This is your original HBEVM_token
-import "@openzeppelin/contracts/governance/TimelockController.sol"; 
+import {IAdminToken} from "./IAdminToken.sol";
+import {Registry} from "./Registry.sol";
+import "@openzeppelin/contracts/governance/TimelockController.sol";
 
-// New imports needed for WrapperContract_W
-import "./HBEVM_Wrapped_Token.sol";
-import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol"; // For DAOFactory with wrapped tokens
-import {IAdminToken} from "./IAdminToken.sol"; // For setting admin on wrapped token
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // For IERC20 type
-    
-
-// --- FACTORIES (TokenFactory, TimelockFactory, DAOFactory as previously corrected) ---
-contract TokenFactory {
-    address[] public deployedTokens;
-    address[] public deployedWrappedTokens; 
-
-    function deployToken(
-        string memory name,
-        string memory symbol,
-        uint8 decimals,
-        address[] memory initialMembers,
-        uint256[] memory combinedInitialAmounts, 
-        bool transferrable
-    ) public returns (address) {
-        uint256 membersCount = initialMembers.length;
-        uint256[] memory mintAmounts = new uint256[](membersCount);
-        for (uint i = 0; i < membersCount; i++) {
-            mintAmounts[i] = combinedInitialAmounts[i];
-        }
-        HBEVM_token token = new HBEVM_token(name, symbol, decimals, initialMembers, mintAmounts, transferrable);
-        deployedTokens.push(address(token));
-        return address(token);
-    }
-
-    function deployWrappedToken(
-        IERC20 underlyingToken,
-        string memory wrappedTokenName,
-        string memory wrappedTokenSymbol
-    ) public returns (address) {
-        HBEVM_Wrapped_Token wrappedToken = new HBEVM_Wrapped_Token(underlyingToken, wrappedTokenName, wrappedTokenSymbol);
-        deployedWrappedTokens.push(address(wrappedToken));
-        return address(wrappedToken);
-    }
+// Interfaces to the single-purpose factory contracts
+interface IDAOFactory {
+    function deployDAO(address tokenAddress, address timelockAddress, string memory name, uint[] memory daoSettings) external returns (address);
+}
+interface ITokenFactory {
+    function deployToken(string memory name, string memory symbol, uint8 decimals, address[] memory initialMembers, uint256[] memory combinedInitialAmounts, bool transferrable) external returns (address);
+}
+interface IJurisdictionFactory {
+    function deployJurisdictionToken(string memory name, string memory symbol, address payable registryAddress, address timelockAddress, address[] memory initialMembers, uint256[] memory combinedInitialAmounts) external returns (address);
+}
+interface IInfrastructureFactory {
+    function deployTimelock(address admin, uint256 executionDelay) external returns (address);
+    function deployRegistry(address timelockAddress, address wrapperAddress) external returns (address);
 }
 
-contract TimelockFactory {
-    address[] public deployedTimelocks;
-    function deployTimelock(address admin, uint256 executionDelay) public returns (address) {
-        address[] memory proposers;
-        address[] memory executors;
-        TimelockController timelock = new TimelockController(
-            executionDelay, proposers, executors, admin
-        );
-        deployedTimelocks.push(address(timelock));
-        return address(timelock);
-    }
-}
-
-contract DAOFactory {
-    address[] public deployedDAOs;
-    function deployDAO(address tokenAddress, address timelockAddress,
-    string memory name, uint[] memory initialAmounts 
-    ) public returns (address) {
-        require(initialAmounts.length >= 4, "DAOFactory: Insufficient settings in initialAmounts");
-        uint48 minsDelay = uint48(initialAmounts[initialAmounts.length - 4]);
-        uint32 minsVoting = uint32(initialAmounts[initialAmounts.length - 3]);
-        uint256 pThreshold = initialAmounts[initialAmounts.length - 2];
-        uint8 qvrm = uint8(initialAmounts[initialAmounts.length - 1]);
-        
-        HomebaseDAO dao = new HomebaseDAO(
-            IVotes(tokenAddress), 
-            TimelockController(payable(timelockAddress)),
-            name,
-            minsDelay,
-            minsVoting,
-            pThreshold,
-            qvrm
-        );
-        deployedDAOs.push(address(dao));
-        return address(dao);
-    }
-}
-
-// --- ORIGINAL WrapperContract (UNCHANGED from your working version) ---
 contract WrapperContract {
-    TokenFactory tokenFactory;
-    TimelockFactory timelockFactory;
-    DAOFactory daoFactory;
+    IDAOFactory           public immutable daoFactory;
+    ITokenFactory         public immutable tokenFactory;
+    IJurisdictionFactory  public immutable jurisdictionFactory;
+    IInfrastructureFactory public immutable infrastructureFactory;
+
+    uint256 public nextDeploymentId;
+    struct PendingDeployment {
+        address token;
+        address timelock;
+        address registry;
+        bool isJurisdiction;
+    }
+    mapping(uint256 => PendingDeployment) public pendingDeployments;
+
     address[] public deployedDAOs;
     address[] public deployedTokens;
     address[] public deployedTimelocks;
     address[] public deployedRegistries;
 
     constructor(
+        address _daoFactory,
         address _tokenFactory,
-        address _timelockFactory,
-        address _daoFactory
+        address _jurisdictionFactory,
+        address _infrastructureFactory
     ) {
-        tokenFactory = TokenFactory(_tokenFactory);
-        timelockFactory = TimelockFactory(_timelockFactory);
-        daoFactory = DAOFactory(_daoFactory);
-    }
-
-    function getNumberOfDAOs() public view returns (uint) {
-        return deployedDAOs.length;
+        daoFactory = IDAOFactory(_daoFactory);
+        tokenFactory = ITokenFactory(_tokenFactory);
+        jurisdictionFactory = IJurisdictionFactory(_jurisdictionFactory);
+        infrastructureFactory = IInfrastructureFactory(_infrastructureFactory);
     }
 
     event NewDaoCreated( 
@@ -265,7 +259,7 @@ contract WrapperContract {
         string[] values
     );
 
-    struct DaoParams { 
+    struct DaoParams {
         string name;
         string symbol;
         string description;
@@ -276,51 +270,80 @@ contract WrapperContract {
         string[] keys;
         string[] values;
         bool transferrable;
+        bool isJurisdiction;
     }
 
-    function deployDAOwithToken(DaoParams memory params) public payable { 
-        require(
-            params.initialAmounts.length >= params.initialMembers.length + 4,
-            "Insufficient settings data in initialAmounts array"
-        );
-        address token = tokenFactory.deployToken(
-            params.name, params.symbol, params.decimals,
-            params.initialMembers, params.initialAmounts, params.transferrable
-        );
-        address timelock = timelockFactory.deployTimelock(address(this), params.executionDelay);
-        address dao = daoFactory.deployDAO(token, timelock, params.name, params.initialAmounts);
-        Registry reg = new Registry(timelock, address(this));
-        _finalizeDeployment(dao, token, timelock, payable(address(reg)), params.keys, params.values);
+    function prepareDeployment(DaoParams memory params) public payable returns (uint256 deploymentId) {
+        deploymentId = nextDeploymentId++;
+        
+        address token;
+        address timelock = infrastructureFactory.deployTimelock(address(this), params.executionDelay);
+        address registry = infrastructureFactory.deployRegistry(timelock, address(this));
 
-        emit NewDaoCreated(
-            dao, token, params.initialMembers, params.initialAmounts,
-            params.name, params.symbol, params.description,
-            params.executionDelay, address(reg), params.keys, params.values
-        );
+        if (params.isJurisdiction) {
+            token = jurisdictionFactory.deployJurisdictionToken(params.name, params.symbol, payable(registry), timelock, params.initialMembers, params.initialAmounts);
+        } else {
+            token = tokenFactory.deployToken(params.name, params.symbol, params.decimals, params.initialMembers, params.initialAmounts, params.transferrable);
+        }
+
+        pendingDeployments[deploymentId] = PendingDeployment({
+            token: token,
+            timelock: timelock,
+            registry: registry,
+            isJurisdiction: params.isJurisdiction
+        });
+        
+        return deploymentId; // <-- THE MISSING, CRITICAL RETURN STATEMENT
     }
 
-    function _finalizeDeployment( 
-        address dao,
-        address token,
-        address timelock,
-        address payable registry,
-        string[] memory keys,
-        string[] memory values
-    ) internal {
+    function finalizeDeployment(uint256 deploymentId, DaoParams memory params) public {
+        PendingDeployment memory pending = pendingDeployments[deploymentId];
+        require(pending.token != address(0), "Invalid or completed deploymentId");
+
+        uint[] memory daoSettings;
+        if (pending.isJurisdiction) {
+            require(params.initialAmounts.length >= 4, "Jurisdiction DAO settings requires 4 elements");
+            daoSettings = new uint[](4);
+            for(uint i=0; i < 4; i++){
+                daoSettings[i] = params.initialAmounts[i];
+            }
+        } else {
+            require(params.initialAmounts.length >= params.initialMembers.length + 4, "Insufficient legacy settings");
+            daoSettings = new uint[](params.initialAmounts.length - params.initialMembers.length);
+            for(uint i = 0; i < daoSettings.length; i++) {
+                daoSettings[i] = params.initialAmounts[params.initialMembers.length + i];
+            }
+        }
+        
+        address dao = daoFactory.deployDAO(pending.token, pending.timelock, params.name, daoSettings);
+
+        _finalize(dao, pending.token, pending.timelock, payable(pending.registry), params.keys, params.values);
+        IAdminToken(pending.token).setAdmin(pending.timelock);
+
+        if (pending.isJurisdiction) {
+            Registry(payable(pending.registry)).setJurisdictionAddress(pending.token);
+        }
+        
+        emit NewDaoCreated(dao, pending.token, params.initialMembers, params.initialAmounts, params.name, params.symbol, params.description, params.executionDelay, pending.registry, params.keys, params.values);
+        delete pendingDeployments[deploymentId];
+    }
+
+    function _finalize(address dao, address token, address timelock, address payable registry, string[] memory keys, string[] memory values) internal {
         deployedDAOs.push(dao);
         deployedTokens.push(token);
         deployedTimelocks.push(timelock);
         deployedRegistries.push(registry);
-        HBEVM_token(token).setAdmin(timelock); 
+        
         TimelockController timelockController = TimelockController(payable(timelock));
         timelockController.grantRole(timelockController.PROPOSER_ROLE(), dao);
         timelockController.grantRole(timelockController.EXECUTOR_ROLE(), dao);
-        if (keys.length > 0) { 
+
+        if (keys.length > 0) {
             Registry(registry).batchEditRegistry(keys, values);
         }
     }
 }
-
+// Factories.sol
 ```
 
 ### `contracts/Factories_W.sol`
@@ -542,93 +565,228 @@ interface IAdminToken {
 
 ### `contracts/Jurisdiction.sol`
 ```sol
+// contracts/Jurisdiction.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/governance/Governor.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
+import {IAdminToken} from "./IAdminToken.sol";
+import {Registry} from "./Registry.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import {Checkpoints} from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 
-contract IncentivizedGovernor is Governor, GovernorCountingSimple, GovernorVotes, GovernorVotesQuorumFraction {
-    IERC20 public paymentToken;   // The token used for rewards
-    uint256 public lastRewardTime;  // Last time rewards were calculated
-    uint256 public rewardInterval = 30 days; // Monthly reward period
-    mapping(address => uint256) public delegateRewards;  // Track accumulated rewards for each delegate
-    mapping(address => uint256) public delegateLastSnapshot;  // Last snapshot of voting power for each delegate
-    IVotes govToken;
-    constructor(IVotes _token, IERC20 _paymentToken)
-        Governor("IncentivizedGovernor")
-        GovernorVotes(_token)
-        GovernorVotesQuorumFraction(4) 
+contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
+    using Checkpoints for Checkpoints.Trace208;
+
+    address public admin;
+    bool private adminSet;
+    bool public constant isTransferable = false;
+
+    address payable public immutable registryAddress;
+    address public immutable timelockAddress;
+
+    mapping(address => uint256) public reputationOwed;
+    
+    mapping(address => Checkpoints.Trace208) private _balanceHistory;
+
+    struct RewardEpoch {
+        uint256 budget;
+        address paymentToken;
+        uint48 startTimestamp;
+    }
+
+    uint256 public currentPassiveIncomeEpoch;
+    mapping(uint256 => RewardEpoch) public passiveIncomeEpochs;
+    mapping(uint256 => mapping(address => bool)) public hasClaimedPassiveIncome;
+
+    uint256 public currentDelegateRewardEpoch;
+    mapping(uint256 => RewardEpoch) public delegateRewardEpochs;
+    mapping(uint256 => mapping(address => bool)) public hasClaimedDelegateReward;
+
+    event ReputationAccrued(address indexed member, uint256 amount);
+    event ReputationClaimed(address indexed member, uint256 amount);
+    event NewPassiveIncomeEpoch(uint256 indexed epochId, uint256 budget, address indexed paymentToken);
+    event PassiveIncomeClaimed(address indexed member, uint256 indexed epochId, uint256 amount);
+    event NewDelegateRewardEpoch(uint256 indexed epochId, uint256 budget, address indexed paymentToken);
+    event DelegateRewardClaimed(address indexed delegate, uint256 indexed epochId, uint256 amount);
+    
+    constructor(
+        string memory name,
+        string memory symbol,
+        address payable _registryAddress,
+        address _timelockAddress,
+        address[] memory initialMembers,
+        uint256[] memory initialAmounts
+    )
+        ERC20(name, symbol)
+        ERC20Permit(name)
     {
-        paymentToken = _paymentToken;
-        govToken=IVotes(_token);
-        lastRewardTime = block.timestamp;
+        require(_registryAddress != address(0) && _timelockAddress != address(0), "Jurisdiction: Invalid addresses");
+        registryAddress = _registryAddress;
+        timelockAddress = _timelockAddress;
+        adminSet = false;
+
+        for (uint i = 0; i < initialMembers.length; i++) {
+            _mint(initialMembers[i], initialAmounts[i]);
+        }
     }
 
-    // Override functions for voting delay, period, and proposal threshold
-    function votingDelay() public pure override returns (uint256) {
-        return 1 days;
+    function accrueReputation(address[] calldata members, uint256[] calldata amounts, address paymentToken) external {
+        require(msg.sender == timelockAddress, "Jurisdiction: Only Timelock can accrue");
+        require(members.length == amounts.length, "Jurisdiction: Array lengths must match");
+
+        string memory parityKey = string.concat("jurisdiction.parity.", Strings.toHexString(paymentToken));
+        string memory parityStr = Registry(registryAddress).getRegistryValue(parityKey);
+        uint256 parity = Strings.parseUint(parityStr);
+        require(parity > 0, "Jurisdiction: Parity not set or invalid for token");
+
+        for (uint i = 0; i < members.length; i++) {
+            uint256 reputationToAccrue = amounts[i] * parity;
+            if (reputationToAccrue > 0) {
+                reputationOwed[members[i]] += reputationToAccrue;
+                emit ReputationAccrued(members[i], reputationToAccrue);
+            }
+        }
     }
 
-    function votingPeriod() public pure override returns (uint256) {
-        return 1 weeks;
+    function claimOwedReputation() external {
+        uint256 amountToClaim = reputationOwed[msg.sender];
+        require(amountToClaim > 0, "Jurisdiction: No reputation owed");
+
+        reputationOwed[msg.sender] = 0;
+        _mint(msg.sender, amountToClaim);
+        emit ReputationClaimed(msg.sender, amountToClaim);
     }
 
-    function proposalThreshold() public pure override returns (uint256) {
-        return 0;
+    function startNewPassiveIncomeEpoch(uint256 budget, address paymentToken) external {
+        require(msg.sender == timelockAddress, "Jurisdiction: Only Timelock can start an epoch");
+        currentPassiveIncomeEpoch++;
+        passiveIncomeEpochs[currentPassiveIncomeEpoch] = RewardEpoch({
+            budget: budget,
+            paymentToken: paymentToken,
+            startTimestamp: clock()
+        });
+        emit NewPassiveIncomeEpoch(currentPassiveIncomeEpoch, budget, paymentToken);
     }
 
-    // Allow delegates to claim rewards based on their voting power
-    function claimRewards() public {
-        require(block.timestamp >= lastRewardTime + rewardInterval, "Reward interval has not passed yet");
-
-        // Calculate the voting power of the delegate over the last month
-        uint256 delegateVotingPower = getVotes(msg.sender, block.number - 1); // voting power at previous block
-
-        // Calculate the total token amount held in the treasury (assuming the treasury holds the payment token)
-        uint256 treasuryBalance = paymentToken.balanceOf(address(this));
-
-        // Calculate the delegate's share of the rewards
-        uint256 rewardShare = (delegateVotingPower * treasuryBalance) / totalSupply(); // reward proportional to voting power
-
-        // Update delegate's reward balance
-        delegateRewards[msg.sender] += rewardShare;
-
-        // Update the last reward calculation time
-        lastRewardTime = block.timestamp;
+    function startNewDelegateRewardEpoch(uint256 budget, address paymentToken) external {
+        require(msg.sender == timelockAddress, "Jurisdiction: Only Timelock can start an epoch");
+        currentDelegateRewardEpoch++;
+        delegateRewardEpochs[currentDelegateRewardEpoch] = RewardEpoch({
+            budget: budget,
+            paymentToken: paymentToken,
+            startTimestamp: clock()
+        });
+        emit NewDelegateRewardEpoch(currentDelegateRewardEpoch, budget, paymentToken);
     }
 
-    // Allow the delegate to withdraw their rewards
-    function withdrawRewards() public {
-        uint256 rewardAmount = delegateRewards[msg.sender];
-        require(rewardAmount > 0, "No rewards to withdraw");
+    function claimPassiveIncome() external {
+        uint256 epochId = currentPassiveIncomeEpoch;
+        RewardEpoch storage epoch = passiveIncomeEpochs[epochId];
+        
+        require(epochId > 0, "Jurisdiction: No active income epoch");
+        require(!hasClaimedPassiveIncome[epochId][msg.sender], "Jurisdiction: Already claimed for this epoch");
+        
+        uint256 snapshotTime = epoch.startTimestamp - 1;
+        uint256 userReputation = _getPastBalance(msg.sender, snapshotTime);
+        require(userReputation > 0, "Jurisdiction: No reputation at epoch start");
 
-        // Reset the delegate's reward balance
-        delegateRewards[msg.sender] = 0;
+        uint256 totalReputation = getPastTotalSupply(snapshotTime);
+        require(totalReputation > 0, "Jurisdiction: Zero total supply at epoch start");
 
-        // Transfer the reward to the delegate
-        paymentToken.transfer(msg.sender, rewardAmount);
+        uint256 rewardAmount = (userReputation * epoch.budget) / totalReputation;
+        require(rewardAmount > 0, "Jurisdiction: Reward amount is zero");
+
+        hasClaimedPassiveIncome[epochId][msg.sender] = true;
+        bytes32 purpose = keccak256(abi.encodePacked("PASSIVE_INCOME", epochId, epoch.paymentToken));
+        Registry(registryAddress).disburseEarmarked(msg.sender, rewardAmount, purpose, epoch.paymentToken);
+
+        emit PassiveIncomeClaimed(msg.sender, epochId, rewardAmount);
     }
 
-    // Helper function to set a new payment token via a governance proposal
-    function setPaymentToken(IERC20 _newPaymentToken) public onlyGovernance {
-        paymentToken = _newPaymentToken;
+    function claimRepresentationReward() external {
+        uint256 epochId = currentDelegateRewardEpoch;
+        RewardEpoch storage epoch = delegateRewardEpochs[epochId];
+
+        require(epochId > 0, "Jurisdiction: No active delegate epoch");
+        require(!hasClaimedDelegateReward[epochId][msg.sender], "Jurisdiction: Already claimed for this epoch");
+
+        uint256 snapshotTime = epoch.startTimestamp - 1;
+        uint256 totalVotingPower = getPastVotes(msg.sender, snapshotTime);
+        uint256 ownPastBalance = _getPastBalance(msg.sender, snapshotTime);
+        
+        require(totalVotingPower > ownPastBalance, "Jurisdiction: No delegated votes at epoch start");
+        uint256 delegatedVotes = totalVotingPower - ownPastBalance;
+
+        uint256 totalReputation = getPastTotalSupply(snapshotTime);
+        require(totalReputation > 0, "Jurisdiction: Zero total supply at epoch start");
+
+        uint256 rewardAmount = (delegatedVotes * epoch.budget) / totalReputation;
+        require(rewardAmount > 0, "Jurisdiction: Reward amount is zero");
+
+        hasClaimedDelegateReward[epochId][msg.sender] = true;
+        bytes32 purpose = keccak256(abi.encodePacked("DELEGATE_REWARD", epochId, epoch.paymentToken));
+        Registry(registryAddress).disburseEarmarked(msg.sender, rewardAmount, purpose, epoch.paymentToken);
+        emit DelegateRewardClaimed(msg.sender, epochId, rewardAmount);
     }
 
-    // Calculate total supply of voting power in the system (based on the voting token)
-    function totalSupply() public view returns (uint256) {
-        return IVotes(govToken).getPastTotalSupply(block.number - 1); // retrieve total voting supply
+    function getPastBalance(address account, uint256 timepoint) public view returns (uint256) {
+        return _getPastBalance(account, timepoint);
     }
+
+    function _getPastBalance(address account, uint256 timepoint) internal view returns (uint256) {
+        require(timepoint <= type(uint48).max, "Jurisdiction: timepoint exceeds uint48 range");
+        return _balanceHistory[account].upperLookup(uint48(timepoint));
+    }
+
+    function delegate(address delegatee) public override {
+        address oldDelegate = delegates(msg.sender);
+        super.delegate(delegatee);
+        uint48 timestamp = clock();
+        
+        _balanceHistory[msg.sender].push(timestamp, uint208(balanceOf(msg.sender)));
+        if (oldDelegate != address(0)) {
+            _balanceHistory[oldDelegate].push(timestamp, uint208(balanceOf(oldDelegate)));
+        }
+        if (delegatee != address(0)) {
+            _balanceHistory[delegatee].push(timestamp, uint208(balanceOf(delegatee)));
+        }
+    }
+
+    function decimals() public pure override returns (uint8) { return 18; }
+    function CLOCK_MODE() public pure override returns (string memory) { return "mode=timestamp"; }
+    function clock() public view override returns (uint48) { return uint48(block.timestamp); }
+
+    function setAdmin(address newAdmin) public override {
+        require(!adminSet, "Admin has already been set");
+        admin = newAdmin;
+        adminSet = true;
+    }
+
+    function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Votes) {
+        super._update(from, to, value);
+        uint48 timestamp = clock();
+        if (from != address(0)) {
+            _balanceHistory[from].push(timestamp, uint208(balanceOf(from)));
+        }
+        if (to != address(0)) {
+            _balanceHistory[to].push(timestamp, uint208(balanceOf(to)));
+        }
+    }
+    
+    function nonces(address owner) public view override(ERC20Permit, Nonces) returns (uint256) { return super.nonces(owner); }
+    function transfer(address, uint256) public pure override returns (bool) { revert("Jurisdiction: Reputation is non-transferable"); }
+    function transferFrom(address, address, uint256) public pure override returns (bool) { revert("Jurisdiction: Reputation is non-transferable"); }
 }
-
+// Jurisdiction.sol
 ```
 
 ### `contracts/Registry.sol`
 ```sol
+// contracts/Registry.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -642,6 +800,9 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
     string[] private keys;
     address public owner;
     address public wrapper;
+
+    address public jurisdictionAddress;
+    mapping(bytes32 => uint256) public earmarkedFunds;
 
     modifier _treasuryOps(){
          require(msg.sender == owner , "Only the DAO can make transfers");
@@ -658,6 +819,12 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
     event TransferredETH(address indexed to, uint256 amount);
     event TransferredERC20(address indexed token, address indexed to, uint256 amount);
     event TransferredERC721(address indexed token, address indexed to, uint256 tokenId);
+    
+    event JurisdictionAddressSet(address indexed jurisdiction);
+    event FundsEarmarked(bytes32 indexed purpose, uint256 amount);
+    event EarmarkedFundsWithdrawn(bytes32 indexed purpose, uint256 amount);
+    event EarmarkedFundsDisbursed(address indexed recipient, bytes32 indexed purpose, uint256 amount);
+
 
      receive() external payable {
         emit ReceivedETH(msg.sender, msg.value);
@@ -668,22 +835,17 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         uint256 tokenId,
         bytes calldata data
     ) external override returns (bytes4) {
-        // Silence unused parameter warnings
         operator; data;
         emit ReceivedERC721(from, msg.sender, tokenId);
         return this.onERC721Received.selector;
     }
 
-    // Transfer ETH
     function transferETH(address payable to, uint256 amount) _treasuryOps external nonReentrant {
         require(address(this).balance >= amount, "Insufficient balance");
-        uint256 initialBalance = address(this).balance;
         to.transfer(amount);
-        require(address(this).balance == initialBalance - amount, "Transfer failed");
         emit TransferredETH(to, amount);
     }
 
-    // Transfer ERC20 tokens
     function transferERC20(
         address token,
         address to,
@@ -694,23 +856,13 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         emit TransferredERC20(token, to, amount);
     }
 
-    // Transfer ERC721 tokens
     function transferERC721(
         address token,
         address to,
         uint256 tokenId
     ) external _treasuryOps {
-        require(isERC721(token), "Token is not a valid ERC721");
         IERC721(token).safeTransferFrom(address(this), to, tokenId);
         emit TransferredERC721(token, to, tokenId);
-    }
-
-    function isERC721(address token) internal returns (bool) {
-        try IERC721(token).safeTransferFrom(address(this), address(this), 0) {
-            return true;
-        } catch {
-            return false;
-        }
     }
     
     constructor(address _owner, address _wrapper) {
@@ -723,7 +875,7 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
 
     function editRegistry(string memory key, string memory value) public _regedit {
         if (bytes(reg[key]).length == 0) {
-            keys.push(key); // Only add new keys
+            keys.push(key);
         }
         reg[key] = value;
         emit RegistryUpdated(key, value);
@@ -733,22 +885,16 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         for (uint256 i = 0; i < newKeys.length; i++) {
             string memory key = newKeys[i];
             string memory value = values[i];
-
-            // Check if key already exists in reg
             if (bytes(reg[key]).length == 0) {
                 keys.push(key);
             }
-
-            // Update the value in reg mapping
             reg[key] = value;
         }
     }
 
-
     function getRegistryValue(string memory key) public view returns (string memory) {
         return reg[key];
     }
-
 
     function getAllKeys() public view returns (string[] memory) {
         return keys;
@@ -761,8 +907,60 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         }
         return values;
     }
-}
 
+    function setJurisdictionAddress(address _jurisdictionAddress) external _regedit {
+        require(_jurisdictionAddress != address(0), "Jurisdiction address cannot be zero");
+        jurisdictionAddress = _jurisdictionAddress;
+        emit JurisdictionAddressSet(_jurisdictionAddress);
+    }
+
+    function earmarkFunds(bytes32 purpose, uint256 amount, address tokenAddress) external _treasuryOps {
+        uint256 currentBalance = IERC20(tokenAddress).balanceOf(address(this));
+        require(currentBalance >= earmarkedFunds[purpose] + amount, "Cannot earmark more than available balance");
+        earmarkedFunds[purpose] += amount;
+        emit FundsEarmarked(purpose, amount);
+    }
+
+    function withdrawEarmarkedFunds(bytes32 purpose, uint256 amount) external _treasuryOps {
+        require(earmarkedFunds[purpose] >= amount, "Registry: Cannot withdraw more than earmarked");
+        earmarkedFunds[purpose] -= amount;
+        emit EarmarkedFundsWithdrawn(purpose, amount);
+    }
+
+    function disburseEarmarked(address recipient, uint256 amount, bytes32 purpose, address tokenAddress) external nonReentrant {
+        require(msg.sender == jurisdictionAddress, "Registry: Caller is not the Jurisdiction");
+        require(earmarkedFunds[purpose] >= amount, "Registry: Insufficient earmarked funds");
+        
+        uint256 currentBalance = IERC20(tokenAddress).balanceOf(address(this));
+        require(currentBalance >= amount, "Registry: Insufficient token balance for disbursement");
+
+        earmarkedFunds[purpose] -= amount;
+        bool success = IERC20(tokenAddress).transfer(recipient, amount);
+        require(success, "ERC20 transfer failed during disbursement");
+        emit EarmarkedFundsDisbursed(recipient, purpose, amount);
+    }
+}
+// Registry.sol
+```
+
+### `contracts/RegistryFactory.sol`
+```sol
+// contracts/RegistryFactory.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "./Registry.sol";
+
+contract RegistryFactory {
+    address[] public deployedRegistries;
+
+    function deployRegistry(address timelockAddress, address wrapperAddress) external returns (address) {
+        Registry registry = new Registry(timelockAddress, wrapperAddress);
+        deployedRegistries.push(address(registry));
+        return address(registry);
+    }
+}
+// RegistryFactory.sol
 ```
 
 ### `contracts/Settings.sol`
@@ -883,6 +1081,28 @@ abstract contract GovernorSettings is Governor {
 }
 ```
 
+### `contracts/TimelockFactory.sol`
+```sol
+// contracts/TimelockFactory.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/governance/TimelockController.sol";
+
+contract TimelockFactory {
+    address[] public deployedTimelocks;
+
+    function deployTimelock(address admin, uint256 executionDelay) external returns (address) {
+        address[] memory proposers;
+        address[] memory executors;
+        TimelockController timelock = new TimelockController(uint32(executionDelay), proposers, executors, admin);
+        deployedTimelocks.push(address(timelock));
+        return address(timelock);
+    }
+}
+// TimelockFactory.sol
+```
+
 ### `contracts/Token.sol`
 ```sol
 // contracts/Token.sol
@@ -983,6 +1203,192 @@ contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes, IAdminToken { // Added I
     }
 }
 // Token.sol
+```
+
+### `contracts/remix.config.json`
+```json
+{
+  "solidity-compiler": {
+    "language": "Solidity",
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "metadata",
+            "devdoc",
+            "userdoc",
+            "storageLayout",
+            "evm.legacyAssembly",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "evm.gasEstimates",
+            "evm.assembly"
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+### `contracts/factories/DAOFactory.sol`
+```sol
+// contracts/factories/DAOFactory.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "../Dao.sol";
+import "@openzeppelin/contracts/governance/TimelockController.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+
+contract DAOFactory {
+    address[] public deployedDAOs;
+
+    function deployDAO(
+        address tokenAddress,
+        address timelockAddress,
+        string memory name,
+        uint[] memory daoSettings
+    ) external returns (address) {
+        require(daoSettings.length >= 4, "DAO settings requires 4 elements");
+        uint48 minsDelay = uint48(daoSettings[0]);
+        uint32 minsVoting = uint32(daoSettings[1]);
+        uint256 pThreshold = daoSettings[2];
+        uint8 qvrm = uint8(daoSettings[3]);
+        
+        HomebaseDAO dao = new HomebaseDAO(
+            IVotes(tokenAddress),
+            TimelockController(payable(timelockAddress)),
+            name,
+            minsDelay,
+            minsVoting,
+            pThreshold,
+            qvrm
+        );
+        deployedDAOs.push(address(dao));
+        return address(dao);
+    }
+}
+// DAOFactory.sol
+```
+
+### `contracts/factories/InfrastructureFactory.sol`
+```sol
+// contracts/factories/InfrastructureFactory.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "../Registry.sol";
+import "@openzeppelin/contracts/governance/TimelockController.sol";
+
+contract InfrastructureFactory {
+    address[] public deployedTimelocks;
+    address[] public deployedRegistries;
+
+    function deployTimelock(address admin, uint256 executionDelay) external returns (address) {
+        address[] memory proposers;
+        address[] memory executors;
+        TimelockController timelock = new TimelockController(uint32(executionDelay), proposers, executors, admin);
+        deployedTimelocks.push(address(timelock));
+        return address(timelock);
+    }
+
+    function deployRegistry(address timelockAddress, address wrapperAddress) external returns (address) {
+        Registry registry = new Registry(timelockAddress, wrapperAddress);
+        deployedRegistries.push(address(registry));
+        return address(registry);
+    }
+}
+// InfrastructureFactory.sol
+```
+
+### `contracts/factories/JurisdictionFactory.sol`
+```sol
+// contracts/factories/JurisdictionFactory.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "../Jurisdiction.sol";
+
+contract JurisdictionFactory {
+    address[] public deployedJurisdictionTokens;
+    
+    function deployJurisdictionToken(
+        string memory name,
+        string memory symbol,
+        address payable registryAddress,
+        address timelockAddress,
+        address[] memory initialMembers,
+        uint256[] memory combinedInitialAmounts // <-- CHANGED to accept the full array
+    ) external returns (address) {
+        // --- NEW: Slicing logic is now inside the factory ---
+        uint256[] memory memberAmounts = new uint256[](initialMembers.length);
+        for(uint i = 0; i < initialMembers.length; i++) {
+            // Assumes DAO settings are the first 4 elements, member amounts follow
+            memberAmounts[i] = combinedInitialAmounts[4 + i]; 
+        }
+
+        Jurisdiction jurisdiction = new Jurisdiction(name, symbol, registryAddress, timelockAddress, initialMembers, memberAmounts);
+        deployedJurisdictionTokens.push(address(jurisdiction));
+        return address(jurisdiction);
+    }
+}
+// JurisdictionFactory.sol
+```
+
+### `contracts/factories/TokenFactory.sol`
+```sol
+// contracts/factories/TokenFactory.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "../Token.sol";
+
+contract TokenFactory {
+    address[] public deployedTokens;
+
+    function deployToken(
+        string memory name,
+        string memory symbol,
+        uint8 decimals,
+        address[] memory initialMembers,
+        uint256[] memory combinedInitialAmounts,
+        bool transferrable
+    ) external returns (address) {
+        HBEVM_token token = new HBEVM_token(name, symbol, decimals, initialMembers, combinedInitialAmounts, transferrable);
+        deployedTokens.push(address(token));
+        return address(token);
+    }
+}
+// TokenFactory.sol
+```
+
+### `contracts/mocks/MockERC20.sol`
+```sol
+// contracts/mocks/MockERC20.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+// A basic ERC20 token for testing purposes.
+contract MockERC20 is ERC20 {
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
+
+    function mint(address to, uint256 amount) public {
+        _mint(to, amount);
+    }
+}
+// MockERC20.sol
 ```
 
 ### `contracts/mocks/MockERC721.sol`
