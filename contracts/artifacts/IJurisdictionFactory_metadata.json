@@ -8,8 +8,18 @@
 			{
 				"inputs": [
 					{
-						"internalType": "address",
-						"name": "tokenAddress",
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					},
+					{
+						"internalType": "address payable",
+						"name": "registryAddress",
 						"type": "address"
 					},
 					{
@@ -18,17 +28,17 @@
 						"type": "address"
 					},
 					{
-						"internalType": "string",
-						"name": "name",
-						"type": "string"
+						"internalType": "address[]",
+						"name": "initialMembers",
+						"type": "address[]"
 					},
 					{
 						"internalType": "uint256[]",
-						"name": "daoSettings",
+						"name": "combinedInitialAmounts",
 						"type": "uint256[]"
 					}
 				],
-				"name": "deployDAO",
+				"name": "deployJurisdictionToken",
 				"outputs": [
 					{
 						"internalType": "address",
@@ -53,7 +63,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"Factories.sol": "IDAOFactory"
+			"Factories.sol": "IJurisdictionFactory"
 		},
 		"evmVersion": "prague",
 		"libraries": {},

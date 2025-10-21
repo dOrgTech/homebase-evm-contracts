@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import {IJurisdictionData} from "./IJurisdictionData.sol"; // <-- ADDED IMPORT
 
 contract Registry is IERC721Receiver, ReentrancyGuard {
 
@@ -12,7 +14,6 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
     string[] private keys;
     address public owner;
     address public wrapper;
-
     address public jurisdictionAddress;
     mapping(bytes32 => uint256) public earmarkedFunds;
 
@@ -151,5 +152,48 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         require(success, "ERC20 transfer failed during disbursement");
         emit EarmarkedFundsDisbursed(recipient, purpose, amount);
     }
+
+    /**
+     * @notice Allows DAO governance to reclaim funds from a concluded benefits epoch after a grace period.
+     * @dev The grace period starts from the beginning of the *next* epoch.
+     * @param epochId The ID of the epoch to reclaim from.
+     * @param paymentToken The address of the token used in that epoch.
+     * @param isDelegateReward A boolean to specify which type of epoch it was.
+     */
+    function reclaimEarmarkedFunds(uint256 epochId, address paymentToken, bool isDelegateReward) external _treasuryOps {
+        // 1. Get the configured grace period from this registry.
+        string memory gracePeriodStr = getRegistryValue("benefits.claim.gracePeriod");
+        uint256 gracePeriod = Strings.parseUint(gracePeriodStr);
+        require(gracePeriod > 0, "Registry: Grace period not set");
+
+        // 2. Determine the timestamp when the grace period started.
+        // This is the start time of the *next* epoch (epochId + 1).
+        uint48 gracePeriodStartTime;
+        if (isDelegateReward) {
+            gracePeriodStartTime = IJurisdictionData(jurisdictionAddress).getDelegateRewardEpochStart(epochId + 1);
+        } else {
+            gracePeriodStartTime = IJurisdictionData(jurisdictionAddress).getPassiveIncomeEpochStart(epochId + 1);
+        }
+
+        // 3. Perform the critical time check.
+        require(gracePeriodStartTime > 0, "Registry: The subsequent epoch has not started yet");
+        require(block.timestamp > gracePeriodStartTime + gracePeriod, "Registry: Claim grace period has not passed");
+
+        // 4. Construct the purpose hash and reclaim the funds.
+        bytes32 purpose;
+        if (isDelegateReward) {
+            purpose = keccak256(abi.encodePacked("DELEGATE_REWARD", epochId, paymentToken));
+        } else {
+            purpose = keccak256(abi.encodePacked("PASSIVE_INCOME", epochId, paymentToken));
+        }
+        
+        uint256 remainingAmount = earmarkedFunds[purpose];
+        require(remainingAmount > 0, "Registry: No funds to reclaim");
+        
+        earmarkedFunds[purpose] = 0;
+
+        emit EarmarkedFundsWithdrawn(purpose, remainingAmount);
+    }
+   
 }
 // Registry.sol

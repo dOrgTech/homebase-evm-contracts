@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.26+commit.8a97fa7a"
+		"version": "0.8.30+commit.73712a01"
 	},
 	"language": "Solidity",
 	"output": {
@@ -591,7 +591,53 @@
 						"type": "address"
 					}
 				],
+				"name": "accrueAndForwardReputation",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address[]",
+						"name": "members",
+						"type": "address[]"
+					},
+					{
+						"internalType": "uint256[]",
+						"name": "amounts",
+						"type": "uint256[]"
+					},
+					{
+						"internalType": "address",
+						"name": "paymentToken",
+						"type": "address"
+					}
+				],
 				"name": "accrueReputation",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address[]",
+						"name": "members",
+						"type": "address[]"
+					},
+					{
+						"internalType": "uint256[]",
+						"name": "amounts",
+						"type": "uint256[]"
+					},
+					{
+						"internalType": "address",
+						"name": "paymentToken",
+						"type": "address"
+					}
+				],
+				"name": "accrueReputationFromChild",
 				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
@@ -720,14 +766,26 @@
 				"type": "function"
 			},
 			{
-				"inputs": [],
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "epochId",
+						"type": "uint256"
+					}
+				],
 				"name": "claimPassiveIncome",
 				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
 			},
 			{
-				"inputs": [],
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "epochId",
+						"type": "uint256"
+					}
+				],
 				"name": "claimRepresentationReward",
 				"outputs": [],
 				"stateMutability": "nonpayable",
@@ -922,6 +980,44 @@
 						"internalType": "uint256[]",
 						"name": "extensions",
 						"type": "uint256[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "epochId",
+						"type": "uint256"
+					}
+				],
+				"name": "getDelegateRewardEpochStart",
+				"outputs": [
+					{
+						"internalType": "uint48",
+						"name": "",
+						"type": "uint48"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "epochId",
+						"type": "uint256"
+					}
+				],
+				"name": "getPassiveIncomeEpochStart",
+				"outputs": [
+					{
+						"internalType": "uint48",
+						"name": "",
+						"type": "uint48"
 					}
 				],
 				"stateMutability": "view",
@@ -1521,6 +1617,9 @@
 				"DOMAIN_SEPARATOR()": {
 					"details": "Returns the domain separator used in the encoding of the signature for {permit}, as defined by {EIP712}."
 				},
+				"accrueReputationFromChild(address[],uint256[],address)": {
+					"details": "Called by a child Jurisdiction to report a payment and accrue reputation for its members in the parent DAO's context."
+				},
 				"allowance(address,address)": {
 					"details": "Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called."
 				},
@@ -1551,6 +1650,24 @@
 				"eip712Domain()": {
 					"details": "returns the fields and values that describe the domain separator used by this contract for EIP-712 signature."
 				},
+				"getDelegateRewardEpochStart(uint256)": {
+					"details": "Returns the start timestamp of a specific delegate reward epoch.",
+					"params": {
+						"epochId": "The ID of the epoch to query."
+					},
+					"returns": {
+						"_0": "The unix timestamp (as uint48) when the epoch started."
+					}
+				},
+				"getPassiveIncomeEpochStart(uint256)": {
+					"details": "Returns the start timestamp of a specific passive income epoch.",
+					"params": {
+						"epochId": "The ID of the epoch to query."
+					},
+					"returns": {
+						"_0": "The unix timestamp (as uint48) when the epoch started."
+					}
+				},
 				"getPastTotalSupply(uint256)": {
 					"details": "Returns the total supply of votes available at a specific moment in the past. If the `clock()` is configured to use block numbers, this will return the value at the end of the corresponding block. NOTE: This value is the sum of all available votes, which is not necessarily the sum of all delegated votes. Votes that have not been delegated are still part of total supply, even though they would not participate in a vote. Requirements: - `timepoint` must be in the past. If operating using block numbers, the block must be already mined."
 				},
@@ -1576,6 +1693,11 @@
 					"details": "Returns the value of tokens in existence."
 				}
 			},
+			"stateVariables": {
+				"registryAddress": {
+					"details": "Returns the address of the implementing contract's Registry. This is crucial for the parent to verify the child's identity."
+				}
+			},
 			"version": 1
 		},
 		"userdoc": {
@@ -1588,7 +1710,7 @@
 		"compilationTarget": {
 			"Jurisdiction.sol": "Jurisdiction"
 		},
-		"evmVersion": "cancun",
+		"evmVersion": "prague",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
@@ -1848,20 +1970,36 @@
 				"dweb:/ipfs/QmRuQzq7dCdXYwZHBe3CgCG8cYMmpsKSAgsAox2y972Ftu"
 			]
 		},
-		"Jurisdiction.sol": {
-			"keccak256": "0xebf30f33f251256faa588cc508a5c345d0cd47545cb0752fd01fdd121549c27d",
+		"IJurisdictionData.sol": {
+			"keccak256": "0x194d11d30bbd946e467e0fca40fc58ee84160a6dee213f3617345430f368f521",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://25fbd3db5d2c58997f5b244f789e2e5159e1e22c0a2be785983b3991989a7388",
-				"dweb:/ipfs/QmXFqLQpq9QRGpSNt9zk79wqqk6YvEdbM1YcpvzcUsibdW"
+				"bzz-raw://9d33d8d9427b3f4b21618971d5c2f5106284ac5d11bcf3b49c10260b73520baa",
+				"dweb:/ipfs/QmUJvDGcp5JHex2BjT5Az9iVMX67EwocmhM1961qYRRZTq"
+			]
+		},
+		"IParentJurisdiction.sol": {
+			"keccak256": "0xb28522cbb597bf30d1a9edc13be6fc9332d2ffe91d342755feca54d07d355e7b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://723194134e6a242f0f06812a3be5b747ea93a23014b0f3e5d20cb45f59b986f6",
+				"dweb:/ipfs/QmR6oEhDRADVD5tgs68dWB28qVQ2fzdmCkW1k5iCbmF6zK"
+			]
+		},
+		"Jurisdiction.sol": {
+			"keccak256": "0x115883c7dced664165c4241ab1825216d07df595a75cc1a2b15e7b9cc09aaca2",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://3ef39f9db56de0153ce83ee764b8680115b3d1c022f35b6ea5bd264a121aced0",
+				"dweb:/ipfs/QmW7zbgGZraMFt5B4RyDK3YGh8gwnrfwrqNpqF8HpMcouJ"
 			]
 		},
 		"Registry.sol": {
-			"keccak256": "0x0e91bb296ed67a5622adb1530f4153ca6aca9e4282a4c6571fd80b7a198ab840",
+			"keccak256": "0x58b74b02919eea712829c369ec1252aa15662c6c520976ee905f44785dd7c95d",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://91c1e1676f4d2d128afcbc56d64923dad3b799c9c179960239d0019db4ddba9d",
-				"dweb:/ipfs/Qme4aDdeyhrx6Tui2TVi71mP7DZFcQ35pajpmwRBsYEEmH"
+				"bzz-raw://e0edef4af07229295829dfa71b20af5519eed0ecf588bb22b07bd93e99036b57",
+				"dweb:/ipfs/QmdSXBMKiqFQ4eYHyKYfTZLVqAJbKoQxniy7hjhitxq55m"
 			]
 		}
 	},

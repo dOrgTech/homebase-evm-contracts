@@ -49,7 +49,8 @@
 		},
 		"gasEstimates": null,
 		"methodIdentifiers": {
-			"deployDAO(address,address,string,uint256[])": "0961b708"
+			"deployRegistry(address,address)": "7ac9a979",
+			"deployTimelock(address,uint256)": "8c9513bb"
 		}
 	},
 	"abi": [
@@ -57,26 +58,40 @@
 			"inputs": [
 				{
 					"internalType": "address",
-					"name": "tokenAddress",
-					"type": "address"
-				},
-				{
-					"internalType": "address",
 					"name": "timelockAddress",
 					"type": "address"
 				},
 				{
-					"internalType": "string",
-					"name": "name",
-					"type": "string"
-				},
-				{
-					"internalType": "uint256[]",
-					"name": "daoSettings",
-					"type": "uint256[]"
+					"internalType": "address",
+					"name": "wrapperAddress",
+					"type": "address"
 				}
 			],
-			"name": "deployDAO",
+			"name": "deployRegistry",
+			"outputs": [
+				{
+					"internalType": "address",
+					"name": "",
+					"type": "address"
+				}
+			],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "admin",
+					"type": "address"
+				},
+				{
+					"internalType": "uint256",
+					"name": "executionDelay",
+					"type": "uint256"
+				}
+			],
+			"name": "deployTimelock",
 			"outputs": [
 				{
 					"internalType": "address",

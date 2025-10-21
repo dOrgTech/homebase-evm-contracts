@@ -33,13 +33,8 @@ describe("Incentive Mechanisms (Phase 2)", function () {
         
         await registry.connect(timelockSigner).setJurisdictionAddress(jurisdictionAddress);
 
-        // --- CORRECTED DELEGATION SETUP ---
-        // Member1 and Member2 delegate to the Delegate
         await jurisdiction.connect(member1).delegate(delegate.address);
         await jurisdiction.connect(member2).delegate(delegate.address);
-        
-        // CRITICAL: The delegate must self-delegate to be an active participant.
-        // This makes their total voting power 450 (100+300+50).
         await jurisdiction.connect(delegate).delegate(delegate.address);
         
         await mine();
@@ -74,7 +69,8 @@ describe("Incentive Mechanisms (Phase 2)", function () {
       const member2Rep = ethers.parseEther("300");
       const expectedReward = (member2Rep * budget) / totalSupply;
 
-      await expect(jurisdiction.connect(member2).claimPassiveIncome())
+      // --- FIX: Pass the epochId to the claim function ---
+      await expect(jurisdiction.connect(member2).claimPassiveIncome(epochId))
         .to.emit(jurisdiction, "PassiveIncomeClaimed").withArgs(member2.address, epochId, expectedReward);
     });
 
@@ -87,8 +83,9 @@ describe("Incentive Mechanisms (Phase 2)", function () {
         const purpose = ethers.solidityPackedKeccak256(["string", "uint256", "address"],["PASSIVE_INCOME", epochId, await paymentToken.getAddress()]);
         await registry.connect(timelockSigner).earmarkFunds(purpose, budget, await paymentToken.getAddress());
 
-        await jurisdiction.connect(member1).claimPassiveIncome();
-        await expect(jurisdiction.connect(member1).claimPassiveIncome())
+        // --- FIX: Pass the epochId to the claim function ---
+        await jurisdiction.connect(member1).claimPassiveIncome(epochId);
+        await expect(jurisdiction.connect(member1).claimPassiveIncome(epochId))
             .to.be.revertedWith("Jurisdiction: Already claimed for this epoch");
     });
   });
@@ -105,14 +102,11 @@ describe("Incentive Mechanisms (Phase 2)", function () {
         await registry.connect(timelockSigner).earmarkFunds(purpose, budget, await paymentToken.getAddress());
         
         const totalRepSnapshot = ethers.parseEther("450");
-        // The rewardable votes are ONLY from others (member1 + member2)
         const delegatedVotes = ethers.parseEther("400"); 
         const expectedReward = (delegatedVotes * budget) / totalRepSnapshot;
 
-        // With self-delegation, getPastVotes is 450 and _getPastBalance is 50.
-        // The contract calculates 450 - 50 = 400.
-        // This will now pass.
-        await expect(jurisdiction.connect(delegate).claimRepresentationReward())
+        // --- FIX: Pass the epochId to the claim function ---
+        await expect(jurisdiction.connect(delegate).claimRepresentationReward(epochId))
           .to.emit(jurisdiction, "DelegateRewardClaimed").withArgs(delegate.address, epochId, expectedReward);
     });
 
@@ -125,9 +119,9 @@ describe("Incentive Mechanisms (Phase 2)", function () {
         const purpose = ethers.solidityPackedKeccak256( ["string", "uint256", "address"], ["DELEGATE_REWARD", epochId, await paymentToken.getAddress()]);
         await registry.connect(timelockSigner).earmarkFunds(purpose, budget, await paymentToken.getAddress());
 
-        await expect(jurisdiction.connect(member1).claimRepresentationReward())
+        // --- FIX: Pass the epochId to the claim function ---
+        await expect(jurisdiction.connect(member1).claimRepresentationReward(epochId))
           .to.be.revertedWith("Jurisdiction: No delegated votes at epoch start");
     });
   });
 });
-// Incentives.test.js

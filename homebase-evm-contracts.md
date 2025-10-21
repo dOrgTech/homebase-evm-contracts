@@ -715,6 +715,7 @@ contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
         require(!hasClaimedDelegateReward[epochId][msg.sender], "Jurisdiction: Already claimed for this epoch");
 
         uint256 snapshotTime = epoch.startTimestamp - 1;
+        
         uint256 totalVotingPower = getPastVotes(msg.sender, snapshotTime);
         uint256 ownPastBalance = _getPastBalance(msg.sender, snapshotTime);
         
@@ -740,20 +741,6 @@ contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
     function _getPastBalance(address account, uint256 timepoint) internal view returns (uint256) {
         require(timepoint <= type(uint48).max, "Jurisdiction: timepoint exceeds uint48 range");
         return _balanceHistory[account].upperLookup(uint48(timepoint));
-    }
-
-    function delegate(address delegatee) public override {
-        address oldDelegate = delegates(msg.sender);
-        super.delegate(delegatee);
-        uint48 timestamp = clock();
-        
-        _balanceHistory[msg.sender].push(timestamp, uint208(balanceOf(msg.sender)));
-        if (oldDelegate != address(0)) {
-            _balanceHistory[oldDelegate].push(timestamp, uint208(balanceOf(oldDelegate)));
-        }
-        if (delegatee != address(0)) {
-            _balanceHistory[delegatee].push(timestamp, uint208(balanceOf(delegatee)));
-        }
     }
 
     function decimals() public pure override returns (uint8) { return 18; }

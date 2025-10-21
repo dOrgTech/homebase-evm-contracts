@@ -49,42 +49,45 @@
 		},
 		"gasEstimates": null,
 		"methodIdentifiers": {
-			"deployDAO(address,address,string,uint256[])": "0961b708"
+			"accrueReputationFromChild(address[],uint256[],address)": "a289e2dc",
+			"registryAddress()": "ed9aab51"
 		}
 	},
 	"abi": [
 		{
 			"inputs": [
 				{
-					"internalType": "address",
-					"name": "tokenAddress",
-					"type": "address"
-				},
-				{
-					"internalType": "address",
-					"name": "timelockAddress",
-					"type": "address"
-				},
-				{
-					"internalType": "string",
-					"name": "name",
-					"type": "string"
+					"internalType": "address[]",
+					"name": "members",
+					"type": "address[]"
 				},
 				{
 					"internalType": "uint256[]",
-					"name": "daoSettings",
+					"name": "amounts",
 					"type": "uint256[]"
-				}
-			],
-			"name": "deployDAO",
-			"outputs": [
+				},
 				{
 					"internalType": "address",
+					"name": "paymentToken",
+					"type": "address"
+				}
+			],
+			"name": "accrueReputationFromChild",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [],
+			"name": "registryAddress",
+			"outputs": [
+				{
+					"internalType": "address payable",
 					"name": "",
 					"type": "address"
 				}
 			],
-			"stateMutability": "nonpayable",
+			"stateMutability": "view",
 			"type": "function"
 		}
 	]

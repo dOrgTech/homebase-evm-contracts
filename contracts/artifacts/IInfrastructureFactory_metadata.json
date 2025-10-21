@@ -9,26 +9,40 @@
 				"inputs": [
 					{
 						"internalType": "address",
-						"name": "tokenAddress",
-						"type": "address"
-					},
-					{
-						"internalType": "address",
 						"name": "timelockAddress",
 						"type": "address"
 					},
 					{
-						"internalType": "string",
-						"name": "name",
-						"type": "string"
-					},
-					{
-						"internalType": "uint256[]",
-						"name": "daoSettings",
-						"type": "uint256[]"
+						"internalType": "address",
+						"name": "wrapperAddress",
+						"type": "address"
 					}
 				],
-				"name": "deployDAO",
+				"name": "deployRegistry",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "admin",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "executionDelay",
+						"type": "uint256"
+					}
+				],
+				"name": "deployTimelock",
 				"outputs": [
 					{
 						"internalType": "address",
@@ -53,7 +67,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"Factories.sol": "IDAOFactory"
+			"Factories.sol": "IInfrastructureFactory"
 		},
 		"evmVersion": "prague",
 		"libraries": {},

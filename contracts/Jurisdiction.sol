@@ -10,15 +10,17 @@ import {IAdminToken} from "./IAdminToken.sol";
 import {Registry} from "./Registry.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import {Checkpoints} from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
+import {IParentJurisdiction} from "./IParentJurisdiction.sol";
+import {IJurisdictionData} from "./IJurisdictionData.sol"; // <-- ADDED IMPORT
 
-contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
+contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken, IParentJurisdiction, IJurisdictionData { // <-- ADDED IJurisdictionData
     using Checkpoints for Checkpoints.Trace208;
 
     address public admin;
     bool private adminSet;
     bool public constant isTransferable = false;
 
-    address payable public immutable registryAddress;
+    address payable public override immutable registryAddress;
     address public immutable timelockAddress;
 
     mapping(address => uint256) public reputationOwed;
@@ -67,8 +69,35 @@ contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
         }
     }
 
+    // --- REPUTATION ACCRUAL LOGIC ---
+
     function accrueReputation(address[] calldata members, uint256[] calldata amounts, address paymentToken) external {
         require(msg.sender == timelockAddress, "Jurisdiction: Only Timelock can accrue");
+        _accrueReputation(members, amounts, paymentToken);
+    }
+
+    function accrueAndForwardReputation(address[] calldata members, uint256[] calldata amounts, address paymentToken) external {
+        require(msg.sender == timelockAddress, "Jurisdiction: Only Timelock can accrue");
+        _accrueReputation(members, amounts, paymentToken);
+        
+        forwardReputationToParent(members, amounts, paymentToken);
+    }
+
+    function accrueReputationFromChild(
+        address[] calldata members,
+        uint256[] calldata amounts,
+        address paymentToken
+    ) external override {
+        address childJurisdictionAddress = msg.sender;
+        address payable childRegistryAddress = IParentJurisdiction(childJurisdictionAddress).registryAddress();
+        string memory childRegistryKey = string.concat("child.registry.", Strings.toHexString(uint256(uint160(address(childRegistryAddress)))));
+        string memory isRecognized = Registry(registryAddress).getRegistryValue(childRegistryKey);
+        require(bytes(isRecognized).length > 0, "Jurisdiction: Caller is not a recognized child DAO");
+
+        _accrueReputation(members, amounts, paymentToken);
+    }
+
+    function _accrueReputation(address[] calldata members, uint256[] calldata amounts, address paymentToken) internal {
         require(members.length == amounts.length, "Jurisdiction: Array lengths must match");
 
         string memory parityKey = string.concat("jurisdiction.parity.", Strings.toHexString(paymentToken));
@@ -84,6 +113,21 @@ contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
             }
         }
     }
+
+    function forwardReputationToParent(address[] calldata members, uint256[] calldata amounts, address paymentToken) internal {
+        string memory parentRegistryStr = Registry(registryAddress).getRegistryValue("parent.registry");
+        if (bytes(parentRegistryStr).length > 0) {
+            address payable parentRegistryAddress = payable(address(uint160(Strings.parseUint(parentRegistryStr))));
+            if (parentRegistryAddress != address(0)) {
+                address parentJurisdictionAddress = Registry(parentRegistryAddress).jurisdictionAddress();
+                if (parentJurisdictionAddress != address(0)) {
+                    try IParentJurisdiction(parentJurisdictionAddress).accrueReputationFromChild(members, amounts, paymentToken) {} catch {}
+                }
+            }
+        }
+    }
+    
+    // --- END ACCRUAL LOGIC ---
 
     function claimOwedReputation() external {
         uint256 amountToClaim = reputationOwed[msg.sender];
@@ -116,56 +160,53 @@ contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
         emit NewDelegateRewardEpoch(currentDelegateRewardEpoch, budget, paymentToken);
     }
 
-    function claimPassiveIncome() external {
-        uint256 epochId = currentPassiveIncomeEpoch;
+    function claimPassiveIncome(uint256 epochId) external {
         RewardEpoch storage epoch = passiveIncomeEpochs[epochId];
-        
-        require(epochId > 0, "Jurisdiction: No active income epoch");
+        require(epochId > 0 && epochId <= currentPassiveIncomeEpoch, "Jurisdiction: Invalid epoch ID");
+        require(epoch.startTimestamp > 0, "Jurisdiction: Epoch does not exist");
         require(!hasClaimedPassiveIncome[epochId][msg.sender], "Jurisdiction: Already claimed for this epoch");
-        
         uint256 snapshotTime = epoch.startTimestamp - 1;
         uint256 userReputation = _getPastBalance(msg.sender, snapshotTime);
         require(userReputation > 0, "Jurisdiction: No reputation at epoch start");
-
         uint256 totalReputation = getPastTotalSupply(snapshotTime);
         require(totalReputation > 0, "Jurisdiction: Zero total supply at epoch start");
-
         uint256 rewardAmount = (userReputation * epoch.budget) / totalReputation;
         require(rewardAmount > 0, "Jurisdiction: Reward amount is zero");
-
         hasClaimedPassiveIncome[epochId][msg.sender] = true;
         bytes32 purpose = keccak256(abi.encodePacked("PASSIVE_INCOME", epochId, epoch.paymentToken));
         Registry(registryAddress).disburseEarmarked(msg.sender, rewardAmount, purpose, epoch.paymentToken);
-
         emit PassiveIncomeClaimed(msg.sender, epochId, rewardAmount);
     }
 
-    function claimRepresentationReward() external {
-        uint256 epochId = currentDelegateRewardEpoch;
+    function claimRepresentationReward(uint256 epochId) external {
         RewardEpoch storage epoch = delegateRewardEpochs[epochId];
-
-        require(epochId > 0, "Jurisdiction: No active delegate epoch");
+        require(epochId > 0 && epochId <= currentDelegateRewardEpoch, "Jurisdiction: Invalid epoch ID");
+        require(epoch.startTimestamp > 0, "Jurisdiction: Epoch does not exist");
         require(!hasClaimedDelegateReward[epochId][msg.sender], "Jurisdiction: Already claimed for this epoch");
-
         uint256 snapshotTime = epoch.startTimestamp - 1;
-        
         uint256 totalVotingPower = getPastVotes(msg.sender, snapshotTime);
         uint256 ownPastBalance = _getPastBalance(msg.sender, snapshotTime);
-        
         require(totalVotingPower > ownPastBalance, "Jurisdiction: No delegated votes at epoch start");
         uint256 delegatedVotes = totalVotingPower - ownPastBalance;
-
         uint256 totalReputation = getPastTotalSupply(snapshotTime);
         require(totalReputation > 0, "Jurisdiction: Zero total supply at epoch start");
-
         uint256 rewardAmount = (delegatedVotes * epoch.budget) / totalReputation;
         require(rewardAmount > 0, "Jurisdiction: Reward amount is zero");
-
         hasClaimedDelegateReward[epochId][msg.sender] = true;
         bytes32 purpose = keccak256(abi.encodePacked("DELEGATE_REWARD", epochId, epoch.paymentToken));
         Registry(registryAddress).disburseEarmarked(msg.sender, rewardAmount, purpose, epoch.paymentToken);
         emit DelegateRewardClaimed(msg.sender, epochId, rewardAmount);
     }
+
+    // --- START: NEW GETTER FUNCTIONS ---
+    function getPassiveIncomeEpochStart(uint256 epochId) external view override returns (uint48) {
+        return passiveIncomeEpochs[epochId].startTimestamp;
+    }
+
+    function getDelegateRewardEpochStart(uint256 epochId) external view override returns (uint48) {
+        return delegateRewardEpochs[epochId].startTimestamp;
+    }
+    // --- END: NEW GETTER FUNCTIONS ---
 
     function getPastBalance(address account, uint256 timepoint) public view returns (uint256) {
         return _getPastBalance(account, timepoint);

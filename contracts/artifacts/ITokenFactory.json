@@ -49,29 +49,44 @@
 		},
 		"gasEstimates": null,
 		"methodIdentifiers": {
-			"deployWrappedToken(address,string,string)": "3e72891d"
+			"deployToken(string,string,uint8,address[],uint256[],bool)": "47356662"
 		}
 	},
 	"abi": [
 		{
 			"inputs": [
 				{
-					"internalType": "contract IERC20",
-					"name": "underlyingToken",
-					"type": "address"
-				},
-				{
 					"internalType": "string",
-					"name": "wrappedTokenName",
+					"name": "name",
 					"type": "string"
 				},
 				{
 					"internalType": "string",
-					"name": "wrappedTokenSymbol",
+					"name": "symbol",
 					"type": "string"
+				},
+				{
+					"internalType": "uint8",
+					"name": "decimals",
+					"type": "uint8"
+				},
+				{
+					"internalType": "address[]",
+					"name": "initialMembers",
+					"type": "address[]"
+				},
+				{
+					"internalType": "uint256[]",
+					"name": "combinedInitialAmounts",
+					"type": "uint256[]"
+				},
+				{
+					"internalType": "bool",
+					"name": "transferrable",
+					"type": "bool"
 				}
 			],
-			"name": "deployWrappedToken",
+			"name": "deployToken",
 			"outputs": [
 				{
 					"internalType": "address",

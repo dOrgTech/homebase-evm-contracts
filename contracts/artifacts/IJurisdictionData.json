@@ -49,42 +49,47 @@
 		},
 		"gasEstimates": null,
 		"methodIdentifiers": {
-			"deployDAO(address,address,string,uint256[])": "0961b708"
+			"getDelegateRewardEpochStart(uint256)": "9b8c45d6",
+			"getPassiveIncomeEpochStart(uint256)": "82ea621f"
 		}
 	},
 	"abi": [
 		{
 			"inputs": [
 				{
-					"internalType": "address",
-					"name": "tokenAddress",
-					"type": "address"
-				},
-				{
-					"internalType": "address",
-					"name": "timelockAddress",
-					"type": "address"
-				},
-				{
-					"internalType": "string",
-					"name": "name",
-					"type": "string"
-				},
-				{
-					"internalType": "uint256[]",
-					"name": "daoSettings",
-					"type": "uint256[]"
+					"internalType": "uint256",
+					"name": "epochId",
+					"type": "uint256"
 				}
 			],
-			"name": "deployDAO",
+			"name": "getDelegateRewardEpochStart",
 			"outputs": [
 				{
-					"internalType": "address",
+					"internalType": "uint48",
 					"name": "",
-					"type": "address"
+					"type": "uint48"
 				}
 			],
-			"stateMutability": "nonpayable",
+			"stateMutability": "view",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "uint256",
+					"name": "epochId",
+					"type": "uint256"
+				}
+			],
+			"name": "getPassiveIncomeEpochStart",
+			"outputs": [
+				{
+					"internalType": "uint48",
+					"name": "",
+					"type": "uint48"
+				}
+			],
+			"stateMutability": "view",
 			"type": "function"
 		}
 	]

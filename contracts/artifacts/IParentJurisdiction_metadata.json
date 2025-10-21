@@ -1,0 +1,91 @@
+{
+	"compiler": {
+		"version": "0.8.30+commit.73712a01"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address[]",
+						"name": "members",
+						"type": "address[]"
+					},
+					{
+						"internalType": "uint256[]",
+						"name": "amounts",
+						"type": "uint256[]"
+					},
+					{
+						"internalType": "address",
+						"name": "paymentToken",
+						"type": "address"
+					}
+				],
+				"name": "accrueReputationFromChild",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "registryAddress",
+				"outputs": [
+					{
+						"internalType": "address payable",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"details": "Defines the functions required for parent-child DAO interactions.",
+			"kind": "dev",
+			"methods": {
+				"accrueReputationFromChild(address[],uint256[],address)": {
+					"details": "Called by a child Jurisdiction to report a payment and accrue reputation for its members in the parent DAO's context."
+				},
+				"registryAddress()": {
+					"details": "Returns the address of the implementing contract's Registry. This is crucial for the parent to verify the child's identity."
+				}
+			},
+			"title": "IParentJurisdiction Interface",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"IParentJurisdiction.sol": "IParentJurisdiction"
+		},
+		"evmVersion": "prague",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"IParentJurisdiction.sol": {
+			"keccak256": "0xb28522cbb597bf30d1a9edc13be6fc9332d2ffe91d342755feca54d07d355e7b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://723194134e6a242f0f06812a3be5b747ea93a23014b0f3e5d20cb45f59b986f6",
+				"dweb:/ipfs/QmR6oEhDRADVD5tgs68dWB28qVQ2fzdmCkW1k5iCbmF6zK"
+			]
+		}
+	},
+	"version": 1
+}
