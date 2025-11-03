@@ -2,24 +2,18 @@
 
 - homebase-evm-contracts/
   - contracts/
-    - DAOFactory.sol
     - Dao.sol
-    - Factories.sol
-    - Factories_W.sol
-    - HBEVM_Wrapped_Token.sol
     - IAdminToken.sol
+    - IJurisdictionData.sol
+    - IParentJurisdiction.sol
     - Jurisdiction.sol
     - Registry.sol
-    - RegistryFactory.sol
     - Settings.sol
-    - TimelockFactory.sol
-    - Token.sol
     - remix.config.json
     - factories/
       - DAOFactory.sol
       - InfrastructureFactory.sol
       - JurisdictionFactory.sol
-      - TokenFactory.sol
     - mocks/
       - MockERC20.sol
       - MockERC721.sol
@@ -28,47 +22,6 @@
       - TargetContract.sol
 
 # File Contents
-
-### `contracts/DAOFactory.sol`
-```sol
-
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
-
-import "./Dao.sol";
-import "@openzeppelin/contracts/governance/TimelockController.sol";
-import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-
-contract DAOFactory {
-    address[] public deployedDAOs;
-
-    function deployDAO(
-        address tokenAddress,
-        address timelockAddress,
-        string memory name,
-        uint[] memory daoSettings
-    ) external returns (address) {
-        require(daoSettings.length >= 4, "DAO settings requires 4 elements");
-        uint48 minsDelay = uint48(daoSettings[0]);
-        uint32 minsVoting = uint32(daoSettings[1]);
-        uint256 pThreshold = daoSettings[2];
-        uint8 qvrm = uint8(daoSettings[3]);
-        
-        HomebaseDAO dao = new HomebaseDAO(
-            IVotes(tokenAddress),
-            TimelockController(payable(timelockAddress)),
-            name,
-            minsDelay,
-            minsVoting,
-            pThreshold,
-            qvrm
-        );
-        deployedDAOs.push(address(dao));
-        return address(dao);
-    }
-}
-// DAOFactory.sol
-```
 
 ### `contracts/Dao.sol`
 ```sol
@@ -188,370 +141,6 @@ constructor(
 
 ```
 
-### `contracts/Factories.sol`
-```sol
-// contracts/Factories.sol
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
-
-import {IAdminToken} from "./IAdminToken.sol";
-import {Registry} from "./Registry.sol";
-import "@openzeppelin/contracts/governance/TimelockController.sol";
-
-// Interfaces to the single-purpose factory contracts
-interface IDAOFactory {
-    function deployDAO(address tokenAddress, address timelockAddress, string memory name, uint[] memory daoSettings) external returns (address);
-}
-interface ITokenFactory {
-    function deployToken(string memory name, string memory symbol, uint8 decimals, address[] memory initialMembers, uint256[] memory combinedInitialAmounts, bool transferrable) external returns (address);
-}
-interface IJurisdictionFactory {
-    function deployJurisdictionToken(string memory name, string memory symbol, address payable registryAddress, address timelockAddress, address[] memory initialMembers, uint256[] memory combinedInitialAmounts) external returns (address);
-}
-interface IInfrastructureFactory {
-    function deployTimelock(address admin, uint256 executionDelay) external returns (address);
-    function deployRegistry(address timelockAddress, address wrapperAddress) external returns (address);
-}
-
-contract WrapperContract {
-    IDAOFactory           public immutable daoFactory;
-    ITokenFactory         public immutable tokenFactory;
-    IJurisdictionFactory  public immutable jurisdictionFactory;
-    IInfrastructureFactory public immutable infrastructureFactory;
-
-    uint256 public nextDeploymentId;
-    struct PendingDeployment {
-        address token;
-        address timelock;
-        address registry;
-        bool isJurisdiction;
-    }
-    mapping(uint256 => PendingDeployment) public pendingDeployments;
-
-    address[] public deployedDAOs;
-    address[] public deployedTokens;
-    address[] public deployedTimelocks;
-    address[] public deployedRegistries;
-
-    constructor(
-        address _daoFactory,
-        address _tokenFactory,
-        address _jurisdictionFactory,
-        address _infrastructureFactory
-    ) {
-        daoFactory = IDAOFactory(_daoFactory);
-        tokenFactory = ITokenFactory(_tokenFactory);
-        jurisdictionFactory = IJurisdictionFactory(_jurisdictionFactory);
-        infrastructureFactory = IInfrastructureFactory(_infrastructureFactory);
-    }
-
-    event NewDaoCreated( 
-        address indexed dao,
-        address token,
-        address[] initialMembers,
-        uint256[] initialAmounts, 
-        string name,
-        string symbol,
-        string description,
-        uint256 executionDelay,
-        address registry,
-        string[] keys,
-        string[] values
-    );
-
-    struct DaoParams {
-        string name;
-        string symbol;
-        string description;
-        uint8 decimals;
-        uint256 executionDelay;
-        address[] initialMembers;
-        uint256[] initialAmounts; 
-        string[] keys;
-        string[] values;
-        bool transferrable;
-        bool isJurisdiction;
-    }
-
-    function prepareDeployment(DaoParams memory params) public payable returns (uint256 deploymentId) {
-        deploymentId = nextDeploymentId++;
-        
-        address token;
-        address timelock = infrastructureFactory.deployTimelock(address(this), params.executionDelay);
-        address registry = infrastructureFactory.deployRegistry(timelock, address(this));
-
-        if (params.isJurisdiction) {
-            token = jurisdictionFactory.deployJurisdictionToken(params.name, params.symbol, payable(registry), timelock, params.initialMembers, params.initialAmounts);
-        } else {
-            token = tokenFactory.deployToken(params.name, params.symbol, params.decimals, params.initialMembers, params.initialAmounts, params.transferrable);
-        }
-
-        pendingDeployments[deploymentId] = PendingDeployment({
-            token: token,
-            timelock: timelock,
-            registry: registry,
-            isJurisdiction: params.isJurisdiction
-        });
-        
-        return deploymentId; // <-- THE MISSING, CRITICAL RETURN STATEMENT
-    }
-
-    function finalizeDeployment(uint256 deploymentId, DaoParams memory params) public {
-        PendingDeployment memory pending = pendingDeployments[deploymentId];
-        require(pending.token != address(0), "Invalid or completed deploymentId");
-
-        uint[] memory daoSettings;
-        if (pending.isJurisdiction) {
-            require(params.initialAmounts.length >= 4, "Jurisdiction DAO settings requires 4 elements");
-            daoSettings = new uint[](4);
-            for(uint i=0; i < 4; i++){
-                daoSettings[i] = params.initialAmounts[i];
-            }
-        } else {
-            require(params.initialAmounts.length >= params.initialMembers.length + 4, "Insufficient legacy settings");
-            daoSettings = new uint[](params.initialAmounts.length - params.initialMembers.length);
-            for(uint i = 0; i < daoSettings.length; i++) {
-                daoSettings[i] = params.initialAmounts[params.initialMembers.length + i];
-            }
-        }
-        
-        address dao = daoFactory.deployDAO(pending.token, pending.timelock, params.name, daoSettings);
-
-        _finalize(dao, pending.token, pending.timelock, payable(pending.registry), params.keys, params.values);
-        IAdminToken(pending.token).setAdmin(pending.timelock);
-
-        if (pending.isJurisdiction) {
-            Registry(payable(pending.registry)).setJurisdictionAddress(pending.token);
-        }
-        
-        emit NewDaoCreated(dao, pending.token, params.initialMembers, params.initialAmounts, params.name, params.symbol, params.description, params.executionDelay, pending.registry, params.keys, params.values);
-        delete pendingDeployments[deploymentId];
-    }
-
-    function _finalize(address dao, address token, address timelock, address payable registry, string[] memory keys, string[] memory values) internal {
-        deployedDAOs.push(dao);
-        deployedTokens.push(token);
-        deployedTimelocks.push(timelock);
-        deployedRegistries.push(registry);
-        
-        TimelockController timelockController = TimelockController(payable(timelock));
-        timelockController.grantRole(timelockController.PROPOSER_ROLE(), dao);
-        timelockController.grantRole(timelockController.EXECUTOR_ROLE(), dao);
-
-        if (keys.length > 0) {
-            Registry(registry).batchEditRegistry(keys, values);
-        }
-    }
-}
-// Factories.sol
-```
-
-### `contracts/Factories_W.sol`
-```sol
-// contracts/Factories_W.sol
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24; 
-
-// Imports
-import "./Dao.sol"; 
-import "./Registry.sol"; 
-import "./HBEVM_Wrapped_Token.sol"; 
-import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {IAdminToken} from "./IAdminToken.sol";
-import "@openzeppelin/contracts/governance/TimelockController.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-// Interfaces for Factories
-interface ITokenFactory {
-    function deployWrappedToken(
-        IERC20 underlyingToken,
-        string memory wrappedTokenName, // Will be same as daoName
-        string memory wrappedTokenSymbol
-    ) external returns (address);
-}
-
-interface ITimelockFactory {
-    function deployTimelock(address admin, uint256 executionDelay) external returns (address);
-}
-
-interface IDAOFactory {
-    function deployDAO( 
-        address tokenAddress,
-        address timelockAddress,
-        string memory name, // DAO Name
-        uint[] memory daoSettingsArray 
-    ) external returns (address);
-}
-
-contract WrapperContract_W {
-    ITokenFactory tokenFactory;
-    ITimelockFactory timelockFactory;
-    IDAOFactory daoFactory;
-
-    address[] public deployedDAOs_W; 
-    address[] public deployedTokens_W; 
-    address[] public deployedTimelocks_W;
-    address[] public deployedRegistries_W;
-
-    event DaoWrappedDeploymentInfo( 
-        address indexed daoAddress,
-        address indexed wrappedTokenAddress,
-        address registryAddress,
-        string daoName,         // Used for DAO and Wrapped Token Name
-        string wrappedTokenSymbol, // Still need symbol for wrapped token
-        string description,
-        uint8 quorumFraction    // ADDED (DAO Setting)
-        // Other DAO settings (voting delay, period, threshold) can be fetched
-    );
-
-    struct DaoParamsWrapped {
-        string daoName;
-        string wrappedTokenSymbol;      
-        string description;             
-        uint256 executionDelay;         
-        address underlyingTokenAddress; 
-        uint48 minsVotingDelay;         
-        uint32 minsVotingPeriod;        
-        uint256 proposalThreshold;      
-        uint8 quorumFraction;           // Will be emitted
-        string[] keys;                  
-        string[] values;                
-    }
-
-    constructor(
-        address _tokenFactory,
-        address _timelockFactory,
-        address _daoFactory
-    ) {
-        tokenFactory = ITokenFactory(_tokenFactory);
-        timelockFactory = ITimelockFactory(_timelockFactory);
-        daoFactory = IDAOFactory(_daoFactory);
-    }
-
-    function getNumberOfDAOs_W() public view returns (uint) {
-        return deployedDAOs_W.length;
-    }
-
-    function deployDAOwithWrappedToken(DaoParamsWrapped memory params) public payable {
-        // Use params.daoName for wrappedTokenName
-        address wrappedToken = tokenFactory.deployWrappedToken(
-            IERC20(params.underlyingTokenAddress), params.daoName, params.wrappedTokenSymbol
-        );
-        address timelock = timelockFactory.deployTimelock(address(this), params.executionDelay);
-
-        uint256[] memory daoSettingsArray = new uint256[](4);
-        daoSettingsArray[0] = params.minsVotingDelay;
-        daoSettingsArray[1] = params.minsVotingPeriod;
-        daoSettingsArray[2] = params.proposalThreshold;
-        daoSettingsArray[3] = params.quorumFraction;
-
-        // DAO is deployed with params.daoName
-        address dao = daoFactory.deployDAO(wrappedToken, timelock, params.daoName, daoSettingsArray);
-        
-        Registry reg = new Registry(timelock, address(this)); 
-        address payable registryAddress = payable(address(reg));
-
-        _finalizeDeployment_W(dao, wrappedToken, timelock, registryAddress, params.keys, params.values);
-
-        emit DaoWrappedDeploymentInfo(
-            dao, 
-            wrappedToken, 
-            registryAddress,
-            params.daoName, // Used for both DAO and (implicitly) wrapped token name
-            params.wrappedTokenSymbol,
-            params.description,
-            params.quorumFraction // Emitting quorumFraction
-        );
-    }
-
-    function _finalizeDeployment_W(
-        address dao,
-        address token, 
-        address timelock,
-        address payable registry,
-        string[] memory keys,
-        string[] memory values
-    ) internal {
-        deployedDAOs_W.push(dao);
-        deployedTokens_W.push(token); 
-        deployedTimelocks_W.push(timelock);
-        deployedRegistries_W.push(registry);
-        
-        IAdminToken(token).setAdmin(timelock); 
-
-        TimelockController timelockController = TimelockController(payable(timelock));
-        timelockController.grantRole(timelockController.PROPOSER_ROLE(), dao);
-        timelockController.grantRole(timelockController.EXECUTOR_ROLE(), dao); 
-        if (keys.length > 0) { 
-            Registry(registry).batchEditRegistry(keys, values);
-        }
-    }
-}
-// Factories_W.sol
-```
-
-### `contracts/HBEVM_Wrapped_Token.sol`
-```sol
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
-import {ERC20Wrapper} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Wrapper.sol";
-import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
-import {IAdminToken} from "./IAdminToken.sol"; 
-
-contract HBEVM_Wrapped_Token is ERC20, ERC20Permit, ERC20Votes, ERC20Wrapper, IAdminToken {
-    address public admin; 
-    bool private adminSet;
-
-    constructor(
-        IERC20 underlyingToken,
-        string memory name_, 
-        string memory symbol_ 
-    )
-        ERC20(name_, symbol_)
-        ERC20Permit(name_) 
-        ERC20Wrapper(underlyingToken)
-    {
-        adminSet = false;
-    }
-
-    function CLOCK_MODE() public pure override returns (string memory) {
-        return "mode=timestamp"; 
-    }
-
-    function clock() public view virtual override returns (uint48) {
-        return uint48(block.timestamp); 
-    }
-
-    function decimals() public view override(ERC20, ERC20Wrapper) returns (uint8) {
-        return super.decimals();
-    }
-
-    function _update(address from, address to, uint256 amount) 
-        internal 
-        override(ERC20, ERC20Votes) 
-    {
-        super._update(from, to, amount);
-    }
-
-    function nonces(address owner_) public view virtual override(ERC20Permit, Nonces) returns (uint256) { 
-        return super.nonces(owner_);
-    }
-
-    function setAdmin(address newAdmin) public override { 
-        require(!adminSet, "HBEVM_Wrapped_Token: admin has already been set"); 
-        require(newAdmin != address(0), "HBEVM_Wrapped_Token: new admin address cannot be zero");
-        admin = newAdmin;
-        adminSet = true;
-    }
-}
-// HBEVM_Wrapped_Token.sol
-```
-
 ### `contracts/IAdminToken.sol`
 ```sol
 // SPDX-License-Identifier: MIT
@@ -561,6 +150,61 @@ interface IAdminToken {
     function setAdmin(address newAdmin) external;
 }
 // IAdminToken.sol
+```
+
+### `contracts/IJurisdictionData.sol`
+```sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+/**
+ * @title IJurisdictionData Interface
+ * @dev Defines read-only functions required by other contracts to query epoch data from the Jurisdiction contract.
+ */
+interface IJurisdictionData {
+    /**
+     * @dev Returns the start timestamp of a specific passive income epoch.
+     * @param epochId The ID of the epoch to query.
+     * @return The unix timestamp (as uint48) when the epoch started.
+     */
+    function getPassiveIncomeEpochStart(uint256 epochId) external view returns (uint48);
+
+    /**
+     * @dev Returns the start timestamp of a specific delegate reward epoch.
+     * @param epochId The ID of the epoch to query.
+     * @return The unix timestamp (as uint48) when the epoch started.
+     */
+    function getDelegateRewardEpochStart(uint256 epochId) external view returns (uint48);
+}
+// IJurisdictionData.sol
+```
+
+### `contracts/IParentJurisdiction.sol`
+```sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+/**
+ * @title IParentJurisdiction Interface
+ * @dev Defines the functions required for parent-child DAO interactions.
+ */
+interface IParentJurisdiction {
+    /**
+     * @dev Called by a child Jurisdiction to report a payment and accrue reputation
+     * for its members in the parent DAO's context.
+     */
+    function accrueReputationFromChild(
+        address[] calldata members,
+        uint256[] calldata amounts,
+        address paymentToken
+    ) external;
+
+    /**
+     * @dev Returns the address of the implementing contract's Registry.
+     * This is crucial for the parent to verify the child's identity.
+     */
+    function registryAddress() external view returns (address payable); // <-- CORRECTED to address payable
+}
 ```
 
 ### `contracts/Jurisdiction.sol`
@@ -577,15 +221,17 @@ import {IAdminToken} from "./IAdminToken.sol";
 import {Registry} from "./Registry.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import {Checkpoints} from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
+import {IParentJurisdiction} from "./IParentJurisdiction.sol";
+import {IJurisdictionData} from "./IJurisdictionData.sol"; // <-- ADDED IMPORT
 
-contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
+contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken, IParentJurisdiction, IJurisdictionData { // <-- ADDED IJurisdictionData
     using Checkpoints for Checkpoints.Trace208;
 
     address public admin;
     bool private adminSet;
     bool public constant isTransferable = false;
 
-    address payable public immutable registryAddress;
+    address payable public override immutable registryAddress;
     address public immutable timelockAddress;
 
     mapping(address => uint256) public reputationOwed;
@@ -634,8 +280,35 @@ contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
         }
     }
 
+    // --- REPUTATION ACCRUAL LOGIC ---
+
     function accrueReputation(address[] calldata members, uint256[] calldata amounts, address paymentToken) external {
         require(msg.sender == timelockAddress, "Jurisdiction: Only Timelock can accrue");
+        _accrueReputation(members, amounts, paymentToken);
+    }
+
+    function accrueAndForwardReputation(address[] calldata members, uint256[] calldata amounts, address paymentToken) external {
+        require(msg.sender == timelockAddress, "Jurisdiction: Only Timelock can accrue");
+        _accrueReputation(members, amounts, paymentToken);
+        
+        forwardReputationToParent(members, amounts, paymentToken);
+    }
+
+    function accrueReputationFromChild(
+        address[] calldata members,
+        uint256[] calldata amounts,
+        address paymentToken
+    ) external override {
+        address childJurisdictionAddress = msg.sender;
+        address payable childRegistryAddress = IParentJurisdiction(childJurisdictionAddress).registryAddress();
+        string memory childRegistryKey = string.concat("child.registry.", Strings.toHexString(uint256(uint160(address(childRegistryAddress)))));
+        string memory isRecognized = Registry(registryAddress).getRegistryValue(childRegistryKey);
+        require(bytes(isRecognized).length > 0, "Jurisdiction: Caller is not a recognized child DAO");
+
+        _accrueReputation(members, amounts, paymentToken);
+    }
+
+    function _accrueReputation(address[] calldata members, uint256[] calldata amounts, address paymentToken) internal {
         require(members.length == amounts.length, "Jurisdiction: Array lengths must match");
 
         string memory parityKey = string.concat("jurisdiction.parity.", Strings.toHexString(paymentToken));
@@ -651,6 +324,21 @@ contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
             }
         }
     }
+
+    function forwardReputationToParent(address[] calldata members, uint256[] calldata amounts, address paymentToken) internal {
+        string memory parentRegistryStr = Registry(registryAddress).getRegistryValue("parent.registry");
+        if (bytes(parentRegistryStr).length > 0) {
+            address payable parentRegistryAddress = payable(address(uint160(Strings.parseUint(parentRegistryStr))));
+            if (parentRegistryAddress != address(0)) {
+                address parentJurisdictionAddress = Registry(parentRegistryAddress).jurisdictionAddress();
+                if (parentJurisdictionAddress != address(0)) {
+                    try IParentJurisdiction(parentJurisdictionAddress).accrueReputationFromChild(members, amounts, paymentToken) {} catch {}
+                }
+            }
+        }
+    }
+    
+    // --- END ACCRUAL LOGIC ---
 
     function claimOwedReputation() external {
         uint256 amountToClaim = reputationOwed[msg.sender];
@@ -683,56 +371,53 @@ contract Jurisdiction is ERC20, ERC20Permit, ERC20Votes, IAdminToken {
         emit NewDelegateRewardEpoch(currentDelegateRewardEpoch, budget, paymentToken);
     }
 
-    function claimPassiveIncome() external {
-        uint256 epochId = currentPassiveIncomeEpoch;
+    function claimPassiveIncome(uint256 epochId) external {
         RewardEpoch storage epoch = passiveIncomeEpochs[epochId];
-        
-        require(epochId > 0, "Jurisdiction: No active income epoch");
+        require(epochId > 0 && epochId <= currentPassiveIncomeEpoch, "Jurisdiction: Invalid epoch ID");
+        require(epoch.startTimestamp > 0, "Jurisdiction: Epoch does not exist");
         require(!hasClaimedPassiveIncome[epochId][msg.sender], "Jurisdiction: Already claimed for this epoch");
-        
         uint256 snapshotTime = epoch.startTimestamp - 1;
         uint256 userReputation = _getPastBalance(msg.sender, snapshotTime);
         require(userReputation > 0, "Jurisdiction: No reputation at epoch start");
-
         uint256 totalReputation = getPastTotalSupply(snapshotTime);
         require(totalReputation > 0, "Jurisdiction: Zero total supply at epoch start");
-
         uint256 rewardAmount = (userReputation * epoch.budget) / totalReputation;
         require(rewardAmount > 0, "Jurisdiction: Reward amount is zero");
-
         hasClaimedPassiveIncome[epochId][msg.sender] = true;
         bytes32 purpose = keccak256(abi.encodePacked("PASSIVE_INCOME", epochId, epoch.paymentToken));
         Registry(registryAddress).disburseEarmarked(msg.sender, rewardAmount, purpose, epoch.paymentToken);
-
         emit PassiveIncomeClaimed(msg.sender, epochId, rewardAmount);
     }
 
-    function claimRepresentationReward() external {
-        uint256 epochId = currentDelegateRewardEpoch;
+    function claimRepresentationReward(uint256 epochId) external {
         RewardEpoch storage epoch = delegateRewardEpochs[epochId];
-
-        require(epochId > 0, "Jurisdiction: No active delegate epoch");
+        require(epochId > 0 && epochId <= currentDelegateRewardEpoch, "Jurisdiction: Invalid epoch ID");
+        require(epoch.startTimestamp > 0, "Jurisdiction: Epoch does not exist");
         require(!hasClaimedDelegateReward[epochId][msg.sender], "Jurisdiction: Already claimed for this epoch");
-
         uint256 snapshotTime = epoch.startTimestamp - 1;
-        
         uint256 totalVotingPower = getPastVotes(msg.sender, snapshotTime);
         uint256 ownPastBalance = _getPastBalance(msg.sender, snapshotTime);
-        
         require(totalVotingPower > ownPastBalance, "Jurisdiction: No delegated votes at epoch start");
         uint256 delegatedVotes = totalVotingPower - ownPastBalance;
-
         uint256 totalReputation = getPastTotalSupply(snapshotTime);
         require(totalReputation > 0, "Jurisdiction: Zero total supply at epoch start");
-
         uint256 rewardAmount = (delegatedVotes * epoch.budget) / totalReputation;
         require(rewardAmount > 0, "Jurisdiction: Reward amount is zero");
-
         hasClaimedDelegateReward[epochId][msg.sender] = true;
         bytes32 purpose = keccak256(abi.encodePacked("DELEGATE_REWARD", epochId, epoch.paymentToken));
         Registry(registryAddress).disburseEarmarked(msg.sender, rewardAmount, purpose, epoch.paymentToken);
         emit DelegateRewardClaimed(msg.sender, epochId, rewardAmount);
     }
+
+    // --- START: NEW GETTER FUNCTIONS ---
+    function getPassiveIncomeEpochStart(uint256 epochId) external view override returns (uint48) {
+        return passiveIncomeEpochs[epochId].startTimestamp;
+    }
+
+    function getDelegateRewardEpochStart(uint256 epochId) external view override returns (uint48) {
+        return delegateRewardEpochs[epochId].startTimestamp;
+    }
+    // --- END: NEW GETTER FUNCTIONS ---
 
     function getPastBalance(address account, uint256 timepoint) public view returns (uint256) {
         return _getPastBalance(account, timepoint);
@@ -780,6 +465,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import {IJurisdictionData} from "./IJurisdictionData.sol"; // <-- ADDED IMPORT
 
 contract Registry is IERC721Receiver, ReentrancyGuard {
 
@@ -787,7 +474,6 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
     string[] private keys;
     address public owner;
     address public wrapper;
-
     address public jurisdictionAddress;
     mapping(bytes32 => uint256) public earmarkedFunds;
 
@@ -926,28 +612,51 @@ contract Registry is IERC721Receiver, ReentrancyGuard {
         require(success, "ERC20 transfer failed during disbursement");
         emit EarmarkedFundsDisbursed(recipient, purpose, amount);
     }
+
+    /**
+     * @notice Allows DAO governance to reclaim funds from a concluded benefits epoch after a grace period.
+     * @dev The grace period starts from the beginning of the *next* epoch.
+     * @param epochId The ID of the epoch to reclaim from.
+     * @param paymentToken The address of the token used in that epoch.
+     * @param isDelegateReward A boolean to specify which type of epoch it was.
+     */
+    function reclaimEarmarkedFunds(uint256 epochId, address paymentToken, bool isDelegateReward) external _treasuryOps {
+        // 1. Get the configured grace period from this registry.
+        string memory gracePeriodStr = getRegistryValue("benefits.claim.gracePeriod");
+        uint256 gracePeriod = Strings.parseUint(gracePeriodStr);
+        require(gracePeriod > 0, "Registry: Grace period not set");
+
+        // 2. Determine the timestamp when the grace period started.
+        // This is the start time of the *next* epoch (epochId + 1).
+        uint48 gracePeriodStartTime;
+        if (isDelegateReward) {
+            gracePeriodStartTime = IJurisdictionData(jurisdictionAddress).getDelegateRewardEpochStart(epochId + 1);
+        } else {
+            gracePeriodStartTime = IJurisdictionData(jurisdictionAddress).getPassiveIncomeEpochStart(epochId + 1);
+        }
+
+        // 3. Perform the critical time check.
+        require(gracePeriodStartTime > 0, "Registry: The subsequent epoch has not started yet");
+        require(block.timestamp > gracePeriodStartTime + gracePeriod, "Registry: Claim grace period has not passed");
+
+        // 4. Construct the purpose hash and reclaim the funds.
+        bytes32 purpose;
+        if (isDelegateReward) {
+            purpose = keccak256(abi.encodePacked("DELEGATE_REWARD", epochId, paymentToken));
+        } else {
+            purpose = keccak256(abi.encodePacked("PASSIVE_INCOME", epochId, paymentToken));
+        }
+        
+        uint256 remainingAmount = earmarkedFunds[purpose];
+        require(remainingAmount > 0, "Registry: No funds to reclaim");
+        
+        earmarkedFunds[purpose] = 0;
+
+        emit EarmarkedFundsWithdrawn(purpose, remainingAmount);
+    }
+   
 }
 // Registry.sol
-```
-
-### `contracts/RegistryFactory.sol`
-```sol
-// contracts/RegistryFactory.sol
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
-
-import "./Registry.sol";
-
-contract RegistryFactory {
-    address[] public deployedRegistries;
-
-    function deployRegistry(address timelockAddress, address wrapperAddress) external returns (address) {
-        Registry registry = new Registry(timelockAddress, wrapperAddress);
-        deployedRegistries.push(address(registry));
-        return address(registry);
-    }
-}
-// RegistryFactory.sol
 ```
 
 ### `contracts/Settings.sol`
@@ -1068,130 +777,6 @@ abstract contract GovernorSettings is Governor {
 }
 ```
 
-### `contracts/TimelockFactory.sol`
-```sol
-// contracts/TimelockFactory.sol
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
-
-import "@openzeppelin/contracts/governance/TimelockController.sol";
-
-contract TimelockFactory {
-    address[] public deployedTimelocks;
-
-    function deployTimelock(address admin, uint256 executionDelay) external returns (address) {
-        address[] memory proposers;
-        address[] memory executors;
-        TimelockController timelock = new TimelockController(uint32(executionDelay), proposers, executors, admin);
-        deployedTimelocks.push(address(timelock));
-        return address(timelock);
-    }
-}
-// TimelockFactory.sol
-```
-
-### `contracts/Token.sol`
-```sol
-// contracts/Token.sol
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20; // Assuming this is the pragma from your original file
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
-import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
-// import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol"; // From original, not used
-// import "@openzeppelin/contracts/access/Ownable.sol"; // From original, not used by HBEVM_token
-// import "@openzeppelin/contracts/utils/Strings.sol"; // From original, not used
-import {IAdminToken} from "./IAdminToken.sol"; // Added import
-    
-contract HBEVM_token is ERC20, ERC20Permit, ERC20Votes, IAdminToken { // Added IAdminToken
-    uint8 private _decimals;
-    address public admin; // 'public' makes getter automatically
-    bool public isTransferable;
-    bool private adminSet; // Matches your original variable declaration style
-
-    constructor(
-        string memory name,
-        string memory symbol,
-        uint8 decimals_,
-        address[] memory initialMembers,
-        uint256[] memory initialAmounts, // Original: HBEVM_token constructor uses the prefix of this for minting
-        bool transferrable
-    ) 
-        ERC20(name, symbol)
-        ERC20Permit(name) 
-    {   
-        _decimals = decimals_;
-        isTransferable = transferrable;
-        adminSet = false; 
-
-        for (uint32 i = 0; i < initialMembers.length; i++) {
-            // This loop correctly only uses the portion of initialAmounts corresponding to initialMembers
-             _mint(initialMembers[i], initialAmounts[i]);
-        }
-    }
-
-    function decimals() public view override returns (uint8) {
-        return _decimals;
-    }
-
-    function CLOCK_MODE() public pure override returns (string memory) {
-        return "mode=timestamp";
-    }
-
-    // onlyOwner modifier if you plan to add mint/burn callable by admin
-    modifier onlyOwner {
-        require(msg.sender == admin, "Only admin can perform this action");
-        _;
-    }
-
-    // Optional: mint and burn functions if needed, guarded by admin
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
-    }
-    
-    function clock() public view override returns (uint48) { // Added override
-        return uint48(block.timestamp);
-    }
-
-    function burn(address from, uint256 amount) public onlyOwner {
-        _burn(from, amount);
-    }
-
-    // Function to set the admin, callable only once
-    function setAdmin(address newAdmin) public override { // Added override for IAdminToken
-        require(admin == address(0), "Admin has already been set"); // Original logic
-        require(newAdmin != address(0), "New admin address cannot be zero");
-        admin = newAdmin;
-        adminSet = true; // Assuming you want to track this
-    }
-
-    function _update(address from, address to, uint256 value)
-        internal
-        override(ERC20, ERC20Votes)
-    {
-        super._update(from, to, value);
-    }
-
-    function nonces(address owner) public view override(ERC20Permit, Nonces) returns (uint256) {
-        return super.nonces(owner);
-    }
-
-    // Original transfer function logic
-    function transfer(address recipient, uint256 amount) public override returns (bool) {
-        require(isTransferable, "Transfers are currently disabled");
-        return super.transfer(recipient, amount);
-    }
-
-    // Original transferFrom function logic
-    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
-        require(isTransferable, "Transfers are currently disabled");
-        return super.transferFrom(sender, recipient, amount);
-    }
-}
-// Token.sol
-```
-
 ### `contracts/remix.config.json`
 ```json
 {
@@ -1265,7 +850,7 @@ contract DAOFactory {
         return address(dao);
     }
 }
-// DAOFactory.sol
+// contracts/factories/DAOFactory.sol
 ```
 
 ### `contracts/factories/InfrastructureFactory.sol`
@@ -1295,7 +880,7 @@ contract InfrastructureFactory {
         return address(registry);
     }
 }
-// InfrastructureFactory.sol
+// contracts/factories/InfrastructureFactory.sol
 ```
 
 ### `contracts/factories/JurisdictionFactory.sol`
@@ -1315,48 +900,16 @@ contract JurisdictionFactory {
         address payable registryAddress,
         address timelockAddress,
         address[] memory initialMembers,
-        uint256[] memory combinedInitialAmounts // <-- CHANGED to accept the full array
+        uint256[] memory initialAmounts
     ) external returns (address) {
-        // --- NEW: Slicing logic is now inside the factory ---
-        uint256[] memory memberAmounts = new uint256[](initialMembers.length);
-        for(uint i = 0; i < initialMembers.length; i++) {
-            // Assumes DAO settings are the first 4 elements, member amounts follow
-            memberAmounts[i] = combinedInitialAmounts[4 + i]; 
-        }
+        require(initialMembers.length == initialAmounts.length, "JurisdictionFactory: member and amount arrays must have the same length");
 
-        Jurisdiction jurisdiction = new Jurisdiction(name, symbol, registryAddress, timelockAddress, initialMembers, memberAmounts);
+        Jurisdiction jurisdiction = new Jurisdiction(name, symbol, registryAddress, timelockAddress, initialMembers, initialAmounts);
         deployedJurisdictionTokens.push(address(jurisdiction));
         return address(jurisdiction);
     }
 }
-// JurisdictionFactory.sol
-```
-
-### `contracts/factories/TokenFactory.sol`
-```sol
-// contracts/factories/TokenFactory.sol
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
-
-import "../Token.sol";
-
-contract TokenFactory {
-    address[] public deployedTokens;
-
-    function deployToken(
-        string memory name,
-        string memory symbol,
-        uint8 decimals,
-        address[] memory initialMembers,
-        uint256[] memory combinedInitialAmounts,
-        bool transferrable
-    ) external returns (address) {
-        HBEVM_token token = new HBEVM_token(name, symbol, decimals, initialMembers, combinedInitialAmounts, transferrable);
-        deployedTokens.push(address(token));
-        return address(token);
-    }
-}
-// TokenFactory.sol
+// contracts/factories/JurisdictionFactory.sol
 ```
 
 ### `contracts/mocks/MockERC20.sol`
@@ -1399,7 +952,7 @@ contract MockERC721 is ERC721 {
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../HBEVM_Wrapped_Token.sol";
+
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "../Dao.sol"; // Imports HomebaseDAO which imports IVotes
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol"; // Explicit import for IVotes casting
@@ -1429,16 +982,7 @@ interface IDAOFactory {
     ) external returns (address);
 }
 
-contract MockTokenFactory is ITokenFactory {
-    function deployWrappedToken(
-        IERC20 underlyingToken,
-        string memory wrappedTokenName,
-        string memory wrappedTokenSymbol
-    ) external override returns (address) {
-        HBEVM_Wrapped_Token token = new HBEVM_Wrapped_Token(underlyingToken, wrappedTokenName, wrappedTokenSymbol);
-        return address(token);
-    }
-}
+
 
 contract MockTimelockFactory is ITimelockFactory {
     function deployTimelock(address admin, uint256 executionDelay) external override returns (address) {

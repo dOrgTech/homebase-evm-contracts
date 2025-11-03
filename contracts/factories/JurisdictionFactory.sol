@@ -13,18 +13,13 @@ contract JurisdictionFactory {
         address payable registryAddress,
         address timelockAddress,
         address[] memory initialMembers,
-        uint256[] memory combinedInitialAmounts // <-- CHANGED to accept the full array
+        uint256[] memory initialAmounts
     ) external returns (address) {
-        // --- NEW: Slicing logic is now inside the factory ---
-        uint256[] memory memberAmounts = new uint256[](initialMembers.length);
-        for(uint i = 0; i < initialMembers.length; i++) {
-            // Assumes DAO settings are the first 4 elements, member amounts follow
-            memberAmounts[i] = combinedInitialAmounts[4 + i]; 
-        }
+        require(initialMembers.length == initialAmounts.length, "JurisdictionFactory: member and amount arrays must have the same length");
 
-        Jurisdiction jurisdiction = new Jurisdiction(name, symbol, registryAddress, timelockAddress, initialMembers, memberAmounts);
+        Jurisdiction jurisdiction = new Jurisdiction(name, symbol, registryAddress, timelockAddress, initialMembers, initialAmounts);
         deployedJurisdictionTokens.push(address(jurisdiction));
         return address(jurisdiction);
     }
 }
-// JurisdictionFactory.sol
+// contracts/factories/JurisdictionFactory.sol

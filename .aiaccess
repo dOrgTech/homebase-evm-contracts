@@ -3,5 +3,4 @@
 **/debates/
 .deps/
 .states/
-contracts/Test.sol
-contracts/nft.sol
+test/

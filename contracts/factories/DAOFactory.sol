@@ -34,4 +34,4 @@ contract DAOFactory {
         return address(dao);
     }
 }
-// DAOFactory.sol
+// contracts/factories/DAOFactory.sol

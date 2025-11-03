@@ -23,4 +23,4 @@ contract InfrastructureFactory {
         return address(registry);
     }
 }
-// InfrastructureFactory.sol
+// contracts/factories/InfrastructureFactory.sol
